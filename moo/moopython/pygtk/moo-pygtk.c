@@ -61,7 +61,7 @@ moo_detailed_version (void)
 
 static const char _moo_module_doc[] = "_moo module.";
 
-static PyObject * __attribute__((unused))
+G_GNUC_UNUSED static PyObject *
 py_object_from_moo_py_object (const GValue *value)
 {
     PyObject *obj;
@@ -76,7 +76,7 @@ py_object_from_moo_py_object (const GValue *value)
     return _moo_py_object_ref (obj);
 }
 
-static int __attribute__((unused))
+G_GNUC_UNUSED static int
 py_object_to_moo_py_object (GValue *value, PyObject *obj)
 {
     g_value_set_boxed (value, obj == Py_None ? obj : NULL);
