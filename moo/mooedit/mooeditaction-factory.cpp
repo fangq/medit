@@ -712,13 +712,13 @@ _moo_edit_class_init_actions (MooEditClass *klass)
 
     moo_edit_class_new_action (klass, "InputMethods",
                                "action-type::", MOO_TYPE_MENU_ACTION,
-                               "label", D_("Input _Methods", "gtk20"),
+                               "label", D_("Input _Methods", "gtk30"),
                                "menu-func", create_input_methods_menu_item,
                                (char*) 0);
 
     moo_edit_class_new_action (klass, "SpecialChars",
                                "action-type::", MOO_TYPE_MENU_ACTION,
-                               "label", D_("_Insert Unicode Control Character", "gtk20"),
+                               "label", D_("_Insert Unicode Control Character", "gtk30"),
                                "menu-func", create_special_chars_menu_item,
                                (char*) 0);
 }
@@ -792,7 +792,7 @@ append_special_char_menuitems (GtkMenuShell *menu,
     {
         GtkWidget *menuitem;
 
-        menuitem = gtk_menu_item_new_with_mnemonic (D_(bidi_menu_entries[i].label, "gtk20"));
+        menuitem = gtk_menu_item_new_with_mnemonic (D_(bidi_menu_entries[i].label, "gtk30"));
         g_object_set_data (G_OBJECT (menuitem), "unicode-menu-entry",
                            (gpointer) &bidi_menu_entries[i]);
         g_signal_connect (menuitem, "activate", G_CALLBACK (bidi_menu_item_activate), view);

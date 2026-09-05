@@ -76,3 +76,10 @@ moo/plugins/usertools/moocommand-exe.cpp
 moo/plugins/usertools/moocommand-script.cpp
 moo/plugins/usertools/moousertools.cpp
 moo/plugins/usertools/moousertools-prefs.cpp
+moo/mooedit/moospellcheck.cpp
+moo/plugins/moopagepreview.cpp
+moo/plugins/mooterminal.c
+moo/plugins/moogdb/moogdb.cpp
+moo/plugins/moogdb/moogdb-ui.cpp
+moo/plugins/moogdb/moogdb-session.cpp
+moo/plugins/moogdb/moogdb-project.cpp

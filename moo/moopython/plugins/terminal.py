@@ -81,7 +81,7 @@ class Terminal(Vte.Terminal):
             moo.prefs_set_string(COLOR_SCHEME_KEY, None)
 
     def font_item_activated(self, *whatever):
-        dlg = Gtk.FontChooserDialog(title=D_("Pick a Font", "gtk20"))
+        dlg = Gtk.FontChooserDialog(title=D_("Pick a Font", "gtk30"))
         old_font = self.get_font()
         if old_font:
             dlg.set_font_desc(old_font)

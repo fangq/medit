@@ -32,10 +32,10 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 static GtkStockItem stock_items[] = {
     {(char*) MOO_STOCK_SAVE_NONE, (char*) N_("Save _None"), 0, 0, (char*) GETTEXT_PACKAGE},
     {(char*) MOO_STOCK_SAVE_SELECTED, (char*) N_("Save _Selected"), 0, 0, (char*) GETTEXT_PACKAGE},
-    {(char*) MOO_STOCK_FILE_COPY, (char*) "_Copy", 0, 0, (char*) "gtk20"},
+    {(char*) MOO_STOCK_FILE_COPY, (char*) "_Copy", 0, 0, (char*) "gtk30"},
     {(char*) MOO_STOCK_FILE_MOVE, (char*) N_("Move"), 0, 0, (char*) GETTEXT_PACKAGE},
     {(char*) MOO_STOCK_FILE_LINK, (char*) N_("Link"), 0, 0, (char*) GETTEXT_PACKAGE},
-    {(char*) MOO_STOCK_FILE_SAVE_AS, (char*) "Save _As", 0, 0, (char*) "gtk20"},
+    {(char*) MOO_STOCK_FILE_SAVE_AS, (char*) "Save _As", 0, 0, (char*) "gtk30"},
     {(char*) MOO_STOCK_FILE_SAVE_COPY, (char*) N_("Save Copy"), 0, 0, (char*) GETTEXT_PACKAGE},
     {(char*) MOO_STOCK_NEW_FOLDER, (char*) N_("_New Folder"), 0, 0, (char*) GETTEXT_PACKAGE},
     {(char*) MOO_STOCK_NEW_WINDOW, (char*) N_("New _Window"), 0, 0, (char*) GETTEXT_PACKAGE}

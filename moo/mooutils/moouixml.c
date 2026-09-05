@@ -430,7 +430,7 @@ translate_string (const char *string,
     if (translated == string)
         translated = _(string);
     if (translated == string)
-        translated = D_(string, "gtk20");
+        translated = D_(string, "gtk30");
 
     return g_strdup (translated);
 }
