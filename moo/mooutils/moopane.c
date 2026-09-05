@@ -1774,6 +1774,31 @@ moo_icon_widget_expose_event (GtkWidget      *widget,
     return FALSE;
 }
 
+/* MooIconWidget derives straight from GtkWidget and implemented neither
+ * measure vfunc, so GTK3's default returned 0x0.  _moo_create_small_icon
+ * papered over that with an explicit size request, but _moo_create_arrow_icon
+ * did not -- the notebook's tab-overflow arrows were allocated 0x0 and
+ * draw_arrow's "if (size > 0)" guard skipped them, leaving empty buttons. */
+#define MOO_ICON_WIDGET_SIZE 7
+
+static void
+moo_icon_widget_get_preferred_width (GtkWidget *widget,
+                                     gint      *minimum,
+                                     gint      *natural)
+{
+    (void) widget;
+    *minimum = *natural = MOO_ICON_WIDGET_SIZE;
+}
+
+static void
+moo_icon_widget_get_preferred_height (GtkWidget *widget,
+                                      gint      *minimum,
+                                      gint      *natural)
+{
+    (void) widget;
+    *minimum = *natural = MOO_ICON_WIDGET_SIZE;
+}
+
 static void
 _moo_icon_widget_class_init (MooIconWidgetClass *klass)
 {

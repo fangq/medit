@@ -61,7 +61,6 @@ struct _MooBigPanedPrivate {
     int          drop_button_index;
     GdkRectangle drop_rect;
     GdkRectangle drop_button_rect;
-    GdkWindow   *drop_outline;
     DZ *dz;
     cairo_region_t    *drop_region;
     guint         drop_region_is_buttons : 1;
@@ -343,13 +342,6 @@ moo_big_paned_finalize (GObject *object)
 
     for (i = 0; i < 4; ++i)
         g_object_unref (paned->paned[i]);
-
-    if (paned->priv->drop_outline)
-    {
-        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
-        gdk_window_destroy (paned->priv->drop_outline);
-        paned->priv->drop_outline = NULL;
-    }
 
     if (paned->priv->dz)
     {
@@ -972,7 +964,6 @@ moo_big_paned_get_pane (MooBigPaned    *paned,
 /* rearranging panes
  */
 
-static void         create_drop_outline     (MooBigPaned    *paned);
 static void         get_drop_area           (MooBigPaned    *paned,
                                              MooPaned       *active_child,
                                              MooPanePosition position,
@@ -982,7 +973,71 @@ static void         get_drop_area           (MooBigPaned    *paned,
 // static void         invalidate_drop_outline (MooBigPaned    *paned);
 
 
-/* GTK3: gdk_region_polygon removed. Approximate polygon with bounding rect. */
+/* gdk_region_polygon() is gone in GTK3.  These polygons are rectilinear, so
+ * rasterise them one scanline at a time with the even-odd rule and let
+ * cairo_region_union_rectangle merge the spans back into a compact region.
+ *
+ * The conversion originally replaced each polygon with its bounding box.
+ * The four drop zones are concave L-shapes, so their bounding boxes overlap
+ * heavily: whichever zone happened to be tested first won, and dragging a
+ * pane between edges docked it in the wrong place. */
+static cairo_region_t *
+region_from_polygon (const int *xs, const int *ys, int n)
+{
+    cairo_region_t *region = cairo_region_create ();
+    int min_y = ys[0], max_y = ys[0];
+    int i, y;
+
+    for (i = 1; i < n; ++i)
+    {
+        if (ys[i] < min_y) min_y = ys[i];
+        if (ys[i] > max_y) max_y = ys[i];
+    }
+
+    for (y = min_y; y < max_y; ++y)
+    {
+        int cross[16];
+        int n_cross = 0;
+        int k;
+
+        for (i = 0; i < n && n_cross < (int) G_N_ELEMENTS (cross); ++i)
+        {
+            int j = (i + 1) % n;
+            int y0 = ys[i], y1 = ys[j];
+            int lo = MIN (y0, y1), hi = MAX (y0, y1);
+
+            if (y0 == y1 || y < lo || y >= hi)
+                continue;
+
+            /* crossing x of edge i at the middle of this scanline */
+            cross[n_cross++] = xs[i] +
+                (int) (((double) (y + 0.5 - y0) / (y1 - y0)) * (xs[j] - xs[i]) + 0.5);
+        }
+
+        /* insertion sort; n_cross is tiny */
+        for (i = 1; i < n_cross; ++i)
+        {
+            int v = cross[i];
+            for (k = i - 1; k >= 0 && cross[k] > v; --k)
+                cross[k + 1] = cross[k];
+            cross[k + 1] = v;
+        }
+
+        for (k = 0; k + 1 < n_cross; k += 2)
+        {
+            cairo_rectangle_int_t rect;
+            rect.x = cross[k];
+            rect.y = y;
+            rect.width = cross[k + 1] - cross[k];
+            rect.height = 1;
+            if (rect.width > 0)
+                cairo_region_union_rectangle (region, &rect);
+        }
+    }
+
+    return region;
+}
+
 static cairo_region_t *
 region_6 (int x0, int y0,
           int x1, int y1,
@@ -993,21 +1048,9 @@ region_6 (int x0, int y0,
 {
     int xs[] = {x0, x1, x2, x3, x4, x5};
     int ys[] = {y0, y1, y2, y3, y4, y5};
-    int min_x = x0, max_x = x0, min_y = y0, max_y = y0;
-    int i;
-    cairo_rectangle_int_t rect;
-    for (i = 1; i < 6; i++) {
-        if (xs[i] < min_x) min_x = xs[i];
-        if (xs[i] > max_x) max_x = xs[i];
-        if (ys[i] < min_y) min_y = ys[i];
-        if (ys[i] > max_y) max_y = ys[i];
-    }
-    rect.x = min_x; rect.y = min_y;
-    rect.width = max_x - min_x; rect.height = max_y - min_y;
-    return cairo_region_create_rectangle (&rect);
+    return region_from_polygon (xs, ys, 6);
 }
 
-/* GTK3: gdk_region_polygon removed. Approximate polygon with bounding rect. */
 static cairo_region_t *
 region_4 (int x0, int y0,
           int x1, int y1,
@@ -1016,18 +1059,7 @@ region_4 (int x0, int y0,
 {
     int xs[] = {x0, x1, x2, x3};
     int ys[] = {y0, y1, y2, y3};
-    int min_x = x0, max_x = x0, min_y = y0, max_y = y0;
-    int i;
-    cairo_rectangle_int_t rect;
-    for (i = 1; i < 4; i++) {
-        if (xs[i] < min_x) min_x = xs[i];
-        if (xs[i] > max_x) max_x = xs[i];
-        if (ys[i] < min_y) min_y = ys[i];
-        if (ys[i] > max_y) max_y = ys[i];
-    }
-    rect.x = min_x; rect.y = min_y;
-    rect.width = max_x - min_x; rect.height = max_y - min_y;
-    return cairo_region_create_rectangle (&rect);
+    return region_from_polygon (xs, ys, 4);
 }
 
 
@@ -1272,22 +1304,15 @@ handle_drag_motion (MooPaned       *child,
     if (!get_new_drop_position (paned, child, x, y))
         return;
 
-    if (paned->priv->drop_outline)
-    {
-        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
-        gdk_window_destroy (paned->priv->drop_outline);
-        paned->priv->drop_outline = NULL;
-    }
-
     if (paned->priv->drop_pos >= 0)
-    {
         get_drop_area (paned, child,
                        (MooPanePosition) paned->priv->drop_pos,
                        paned->priv->drop_button_index,
                        &paned->priv->drop_rect,
                        &paned->priv->drop_button_rect);
-        create_drop_outline (paned);
-    }
+
+    /* moo_big_paned_expose paints the outline. */
+    gtk_widget_queue_draw (paned->priv->outer);
 }
 
 
@@ -1295,13 +1320,6 @@ static void
 cleanup_drag (MooBigPaned *paned)
 {
     int pos;
-
-    if (paned->priv->drop_outline)
-    {
-        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
-        gdk_window_destroy (paned->priv->drop_outline);
-        paned->priv->drop_outline = NULL;
-    }
 
     paned->priv->drop_pos = -1;
     paned->priv->drop_region = NULL;
@@ -1517,83 +1535,55 @@ get_drop_area (MooBigPaned    *paned,
 //     cairo_region_destroy (outline);
 // }
 
+/* Paint the drop outline during a pane drag.
+ *
+ * Connected to the "draw" signal of priv->outer (not ::draw_after), so this
+ * runs *before* the class closure.  It used to invoke the widget's own draw
+ * vfunc via G_OBJECT_GET_CLASS, which is the most-derived class -- so the
+ * whole widget tree was drawn twice for the entire duration of every drag,
+ * and the two statements meant to paint the outline had been reduced to
+ * empty comments, so no outline appeared at all.
+ *
+ * GTK2 did this with a shaped GdkWindow; in GTK3 a bare GdkWindow is never
+ * painted, so it is drawn with cairo instead. */
 static gboolean
 moo_big_paned_expose (GtkWidget      *widget,
-                      cairo_t *event,
+                      cairo_t        *cr,
                       MooBigPaned    *paned)
 {
-    GTK_WIDGET_CLASS(G_OBJECT_GET_CLASS (widget))->draw (widget, event);
+    GdkRectangle *r, *br;
+    GdkRGBA color;
 
-    if (paned->priv->drop_pos >= 0)
+    if (paned->priv->drop_pos < 0)
+        return FALSE;
+
+    r  = &paned->priv->drop_rect;
+    br = &paned->priv->drop_button_rect;
+
+    if (!gtk_style_context_lookup_color (gtk_widget_get_style_context (widget),
+                                         "theme_selected_bg_color", &color))
     {
-        g_return_val_if_fail (paned->priv->drop_outline != NULL, FALSE);
-            /* GTK3: Shaped window drawing now uses cairo_region_t.
-       Use gtk_widget_shape_combine_region() instead of bitmap shapes.
-       The drop outline should be drawn in the draw signal handler. */;
-            /* GTK3: Shaped window drawing now uses cairo_region_t.
-       Use gtk_widget_shape_combine_region() instead of bitmap shapes.
-       The drop outline should be drawn in the draw signal handler. */;
+        color.red = 0.3; color.green = 0.6; color.blue = 1.0;
     }
+    color.alpha = 1.0;
+
+    cairo_save (cr);
+    gdk_cairo_set_source_rgba (cr, &color);
+    cairo_set_line_width (cr, 2.0);
+    cairo_rectangle (cr, r->x + 1.0, r->y + 1.0,
+                     MAX (0, r->width - 2), MAX (0, r->height - 2));
+    cairo_stroke (cr);
+
+    /* the button slot the pane would land in */
+    color.alpha = 0.35;
+    gdk_cairo_set_source_rgba (cr, &color);
+    cairo_rectangle (cr, br->x, br->y, br->width, br->height);
+    cairo_fill (cr);
+    cairo_restore (cr);
 
     return FALSE;
 }
 
-/* GTK3: create_rect_mask rewritten using cairo_region_t */
-static cairo_region_t *
-create_rect_region (int           width,
-                    int           height,
-                    GdkRectangle *rect)
-{
-    cairo_region_t *region;
-    cairo_rectangle_int_t full = {0, 0, width, height};
-    cairo_rectangle_int_t hole;
-
-    region = cairo_region_create_rectangle (&full);
-
-    /* Cut out the button rectangle (inner hole) */
-    hole.x = rect->x; hole.y = rect->y;
-    hole.width = rect->width; hole.height = rect->height;
-    cairo_region_subtract_rectangle (region, &hole);
-
-    return region;
-}
-
-static void
-create_drop_outline (MooBigPaned *paned)
-{
-    static GdkWindowAttr attributes;
-    int attributes_mask;
-    cairo_region_t *mask;
-    GdkRectangle button_rect;
-
-    g_return_if_fail (paned->priv->drop_outline == NULL);
-
-    attributes.x = paned->priv->drop_rect.x;
-    attributes.y = paned->priv->drop_rect.y;
-    attributes.width = paned->priv->drop_rect.width;
-    attributes.height = paned->priv->drop_rect.height;
-    attributes.window_type = GDK_WINDOW_CHILD;
-
-    attributes.visual = gtk_widget_get_visual (paned->priv->outer);
-    attributes.wclass = GDK_INPUT_OUTPUT;
-
-    attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL ;
-
-    paned->priv->drop_outline = gdk_window_new (gtk_widget_get_window (paned->priv->outer),
-                                                &attributes, attributes_mask);
-    gtk_widget_register_window (GTK_WIDGET (paned), paned->priv->drop_outline);
-
-    button_rect = paned->priv->drop_button_rect;
-    button_rect.x -= paned->priv->drop_rect.x;
-    button_rect.y -= paned->priv->drop_rect.y;
-    mask = create_rect_region (paned->priv->drop_rect.width,
-                             paned->priv->drop_rect.height,
-                             &button_rect);
-    gdk_window_shape_combine_region (paned->priv->drop_outline, mask, 0, 0);
-    cairo_region_destroy (mask);
-
-    gdk_window_show (paned->priv->drop_outline);
-}
 
 
 /*************************************************************************/
