@@ -2214,8 +2214,6 @@ test_strv_one (const char *string,
     TEST_ASSERT_STRV_EQ_MSG (res, (char**) expected,
                              "moo_splitlines(%s)", TEST_FMT_STR (s));
     g_strfreev (res);
-    g_free (freeme);
-    freeme = NULL;
 
     res = moo_strnsplit_lines (string, len, &n_toks);
     TEST_ASSERT_STRV_EQ_MSG (res, (char**) expected,
@@ -2223,6 +2221,10 @@ test_strv_one (const char *string,
                              TEST_FMT_STR (s), (int) len);
     TEST_ASSERT_INT_EQ (n_toks, res ? g_strv_length (res) : 0);
     g_strfreev (res);
+
+    /* `s` aliases `freeme` when len > 0, and it is read again by the second
+       TEST_FMT_STR above -- so this cannot be freed halfway through. */
+    g_free (freeme);
 }
 
 static void
