@@ -621,29 +621,18 @@ create_button (MooPane      *pane,
 static gboolean
 _moo_pane_draw_bg (GtkWidget *widget, cairo_t *cr, G_GNUC_UNUSED gpointer data)
 {
-    GtkStyleContext *ctx;
-    GdkRGBA bg;
+    GtkStyleContext *ctx = gtk_widget_get_style_context (widget);
     int w = gtk_widget_get_allocated_width (widget);
     int h = gtk_widget_get_allocated_height (widget);
 
-    /* Try theme background first */
-    ctx = gtk_widget_get_style_context (widget);
-    gtk_style_context_get_background_color (ctx,
-        gtk_widget_get_state_flags (widget), &bg);
-    if (bg.alpha < 0.01)
-    {
-        /* Theme returned transparent — use parent's bg or dark fallback */
-        GtkWidget *toplevel = gtk_widget_get_toplevel (widget);
-        if (toplevel)
-            gtk_style_context_get_background_color (
-                gtk_widget_get_style_context (toplevel),
-                gtk_widget_get_state_flags (toplevel), &bg);
-        if (bg.alpha < 0.01)
-            { bg.red = 0.22; bg.green = 0.22; bg.blue = 0.22; bg.alpha = 1.0; }
-    }
-    cairo_set_source_rgba (cr, bg.red, bg.green, bg.blue, bg.alpha);
-    cairo_rectangle (cr, 0, 0, w, h);
-    cairo_fill (cr);
+    /* gtk_render_background() honours the whole CSS background -- colour,
+       gradient and image -- and does the right thing when the node is
+       deliberately transparent.
+       The previous code read gtk_style_context_get_background_color(), which
+       GTK 3.20 and later return fully transparent for most nodes, and then
+       fell back to a hardcoded dark grey: that produced a dark pane on every
+       light theme. */
+    gtk_render_background (ctx, cr, 0, 0, w, h);
     return FALSE; /* continue drawing children */
 }
 
@@ -1624,11 +1613,12 @@ free_pixbufs (MooIconWidget *icon)
     }
 }
 
+/* GTK3 emits "style-updated", not "style-set"; this never ran, so the pane
+ * icons kept the colours of whatever theme was active at startup. */
 static void
-moo_icon_widget_style_set (GtkWidget *widget,
-                           GtkStyle  *old_style)
+moo_icon_widget_style_updated (GtkWidget *widget)
 {
-    GTK_WIDGET_CLASS (_moo_icon_widget_parent_class)->style_set (widget, old_style);
+    GTK_WIDGET_CLASS (_moo_icon_widget_parent_class)->style_updated (widget);
     free_pixbufs ((MooIconWidget*) widget);
 }
 
@@ -1792,7 +1782,7 @@ _moo_icon_widget_class_init (MooIconWidgetClass *klass)
 
     object_class->dispose = moo_icon_widget_dispose;
 
-    widget_class->style_set = moo_icon_widget_style_set;
+    widget_class->style_updated = moo_icon_widget_style_updated;
     widget_class->draw = moo_icon_widget_expose_event;
 }
 

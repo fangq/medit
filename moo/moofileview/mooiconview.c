@@ -132,8 +132,7 @@ static void     moo_icon_view_get_property  (GObject        *object,
 
 static void     moo_icon_view_state_changed (GtkWidget      *widget,
                                              GtkStateType    previous);
-static void     moo_icon_view_style_set     (GtkWidget      *widget,
-                                             GtkStyle       *previous);
+static void     moo_icon_view_style_updated (GtkWidget     *widget);
 static void     moo_icon_view_map           (GtkWidget      *widget);
 static void     moo_icon_view_realize       (GtkWidget      *widget);
 static void     moo_icon_view_unrealize     (GtkWidget      *widget);
@@ -318,7 +317,7 @@ _moo_icon_view_class_init (MooIconViewClass *klass)
     gobject_class->get_property = moo_icon_view_get_property;
 
     widget_class->state_changed = moo_icon_view_state_changed;
-    widget_class->style_set = moo_icon_view_style_set;
+    widget_class->style_updated = moo_icon_view_style_updated;
     widget_class->map = moo_icon_view_map;
     widget_class->realize = moo_icon_view_realize;
     widget_class->unrealize = moo_icon_view_unrealize;
@@ -974,11 +973,12 @@ moo_icon_view_map (GtkWidget *widget)
 }
 
 
+/* GTK3 emits "style-updated", not "style-set". */
 static void
-moo_icon_view_style_set (GtkWidget *widget,
-                         G_GNUC_UNUSED GtkStyle *previous_style)
+moo_icon_view_style_updated (GtkWidget *widget)
 {
-    /* GTK3: background is painted via the draw vfunc; nothing to do here */
+    GTK_WIDGET_CLASS (_moo_icon_view_parent_class)->style_updated (widget);
+    /* GTK3: background is painted via the draw vfunc; just repaint. */
     gtk_widget_queue_draw (widget);
 }
 
@@ -1261,37 +1261,22 @@ moo_icon_view_expose (GtkWidget      *widget,
     {
         cairo_t *cr;
         GdkRectangle rect;
-        double dash_len = 1.;
-        GdkRGBA _sel_stroke_color;
+        GtkStyleContext *ctx;
 
         cr = event;  /* GTK3 draw() already provides a cairo_t */
         get_drag_select_rect (view, &rect);
 
-        {
-            GtkStyleContext *ctx = gtk_widget_get_style_context (widget);
-            gtk_style_context_save (ctx);
-            gtk_style_context_set_state (ctx, GTK_STATE_FLAG_SELECTED);
-            gtk_style_context_get_background_color (ctx, gtk_style_context_get_state (ctx), &_sel_stroke_color);
-            gtk_style_context_restore (ctx);
-
-            cairo_set_source_rgba (cr,
-                                   _sel_stroke_color.red,
-                                   _sel_stroke_color.green,
-                                   _sel_stroke_color.blue,
-                                   1 / 3.);
-        }
-        gdk_cairo_rectangle (cr, &rect);
-        cairo_fill (cr);
-
-        cairo_set_dash (cr, &dash_len, 1, .5);
-        cairo_set_line_width (cr, 1.);
-        gdk_cairo_set_source_rgba (cr, &_sel_stroke_color); /* GTK3 fix */
-        cairo_rectangle (cr,
-                         rect.x + .5,
-                         rect.y + .5,
-                         rect.width - 1,
-                         rect.height - 1);
-        cairo_stroke (cr);
+        /* Draw the themed rubber band.  The previous code derived its colour
+           from gtk_style_context_get_background_color(SELECTED), which GTK
+           3.20 and later return fully transparent for a plain widget node --
+           so the drag-selection rectangle was invisible.  The .rubberband
+           style class is what GtkIconView and GtkTreeView use. */
+        ctx = gtk_widget_get_style_context (widget);
+        gtk_style_context_save (ctx);
+        gtk_style_context_add_class (ctx, GTK_STYLE_CLASS_RUBBERBAND);
+        gtk_render_background (ctx, cr, rect.x, rect.y, rect.width, rect.height);
+        gtk_render_frame (ctx, cr, rect.x, rect.y, rect.width, rect.height);
+        gtk_style_context_restore (ctx);
     }
 
     _moo_icon_view_current_cr = NULL;

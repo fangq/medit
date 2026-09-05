@@ -603,76 +603,56 @@ _color_to_css_string (const GdkRGBA *color)
 	return gdk_rgba_to_string (color);
 }
 
+/* Emit the style scheme's cursor colours as CSS.
+ *
+ * This used to call gtk_widget_modify_cursor(), which routes through
+ * GtkRcStyle and the -GtkWidget-cursor-color style property -- both removed
+ * from the CSS machinery in GTK 3.20, so the scheme's cursor colour was
+ * simply never applied.  caret-color / -gtk-secondary-caret-color are the
+ * GTK3 replacements. */
 static void
-apply_cursor_style (GtkSourceStyleScheme *scheme,
-		    GtkWidget            *widget)
+append_cursor_css (GtkSourceStyleScheme *scheme,
+		   GtkWidget            *widget,
+		   GString              *css)
 {
 	GdkRGBA primary_color, secondary_color;
-	gboolean has_primary = FALSE;
+	GtkSourceStyle *style;
+	gchar *s;
 
-	if (scheme != NULL)
+	if (scheme == NULL)
+		return;
+
+	style = gtk_source_style_scheme_get_style (scheme, STYLE_CURSOR);
+	if (!get_color (style, TRUE, &primary_color))
+		return;
+
+	if (!get_color (gtk_source_style_scheme_get_style (scheme, STYLE_SECONDARY_CURSOR),
+			TRUE, &secondary_color))
 	{
-		GtkSourceStyle *style;
+		/* Blend the primary cursor colour with the view's background. */
+		GdkRGBA base = { 1.0, 1.0, 1.0, 1.0 };
+		GtkSourceStyle *text_style =
+			gtk_source_style_scheme_get_style (scheme, STYLE_TEXT);
 
-		style = gtk_source_style_scheme_get_style (scheme, STYLE_CURSOR);
-		if (get_color (style, TRUE, &primary_color))
-			has_primary = TRUE;
+		if (text_style != NULL)
+			get_color (text_style, FALSE, &base);
 
-		if (has_primary)
-		{
-			GtkSourceStyle *sec_style;
-			sec_style = gtk_source_style_scheme_get_style (scheme, STYLE_SECONDARY_CURSOR);
-			if (!get_color (sec_style, TRUE, &secondary_color))
-			{
-				/* Blend primary with base color */
-				GtkStyleContext *ctx = gtk_widget_get_style_context (widget);
-				GdkRGBA base;
-				gtk_style_context_get_background_color (ctx,
-					GTK_STATE_FLAG_NORMAL, &base);
-				secondary_color.red   = (base.red   + primary_color.red)   / 2.0;
-				secondary_color.green = (base.green + primary_color.green) / 2.0;
-				secondary_color.blue  = (base.blue  + primary_color.blue)  / 2.0;
-				secondary_color.alpha = 1.0;
-			}
-		}
+		secondary_color.red   = (base.red   + primary_color.red)   / 2.0;
+		secondary_color.green = (base.green + primary_color.green) / 2.0;
+		secondary_color.blue  = (base.blue  + primary_color.blue)  / 2.0;
+		secondary_color.alpha = 1.0;
 	}
 
-	if (has_primary)
-	{
-		/* gtk_widget_modify_cursor takes GdkColor* (8-byte struct with
-		 * guint16 channels), NOT GdkRGBA* (32 bytes of doubles).  The
-		 * old "(const GdkColor*) &primary_color" cast was type-punning
-		 * UB — glibc happened to tolerate it on Linux but mingw on
-		 * Windows hard-crashes ("POSIX WinThreads for Windows has
-		 * stopped working") when the dialog Apply triggers it.
-		 * Convert properly first. */
-		GdkColor primary_gdk;
-		GdkColor secondary_gdk;
-		primary_gdk.pixel   = 0;
-		primary_gdk.red     = (guint16) (CLAMP (primary_color.red,   0.0, 1.0) * 65535.0);
-		primary_gdk.green   = (guint16) (CLAMP (primary_color.green, 0.0, 1.0) * 65535.0);
-		primary_gdk.blue    = (guint16) (CLAMP (primary_color.blue,  0.0, 1.0) * 65535.0);
-		secondary_gdk.pixel = 0;
-		secondary_gdk.red   = (guint16) (CLAMP (secondary_color.red,   0.0, 1.0) * 65535.0);
-		secondary_gdk.green = (guint16) (CLAMP (secondary_color.green, 0.0, 1.0) * 65535.0);
-		secondary_gdk.blue  = (guint16) (CLAMP (secondary_color.blue,  0.0, 1.0) * 65535.0);
+	(void) widget;
 
-		G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-		gtk_widget_modify_cursor (widget, &primary_gdk, &secondary_gdk);
-		G_GNUC_END_IGNORE_DEPRECATIONS
-		g_object_set_data (G_OBJECT (widget),
-				   "gtk-source-view-cursor-color-set",
-				   GINT_TO_POINTER (TRUE));
-	}
-	else
-	{
-		if (g_object_get_data (G_OBJECT (widget), "gtk-source-view-cursor-color-set") != NULL)
-		{
-			G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-			gtk_widget_modify_cursor (widget, NULL, NULL);
-			G_GNUC_END_IGNORE_DEPRECATIONS
-		}
-	}
+	s = _color_to_css_string (&primary_color);
+	g_string_append_printf (css, "textview text { caret-color: %s; }\n", s);
+	g_free (s);
+
+	s = _color_to_css_string (&secondary_color);
+	g_string_append_printf (css,
+		"textview text { -gtk-secondary-caret-color: %s; }\n", s);
+	g_free (s);
 }
 
 /**
@@ -705,10 +685,7 @@ _gtk_source_style_scheme_apply (GtkSourceStyleScheme *scheme,
 	}
 
 	if (scheme == NULL)
-	{
-		apply_cursor_style (NULL, widget);
 		return;
-	}
 
 	css = g_string_new ("");
 
@@ -775,6 +752,8 @@ _gtk_source_style_scheme_apply (GtkSourceStyleScheme *scheme,
 		}
 	}
 
+	append_cursor_css (scheme, widget, css);
+
 	if (css->len > 0)
 	{
 		provider = gtk_css_provider_new ();
@@ -789,8 +768,6 @@ _gtk_source_style_scheme_apply (GtkSourceStyleScheme *scheme,
 	}
 
 	g_string_free (css, TRUE);
-
-	apply_cursor_style (scheme, widget);
 }
 
 /* --- PARSER ---------------------------------------------------------------- */

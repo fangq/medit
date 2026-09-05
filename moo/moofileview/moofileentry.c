@@ -802,13 +802,10 @@ completion_popup (MooFileEntryCompletion *cmpl)
 
     gtk_widget_show (cmpl->priv->popup);
 
-    /* GTK3: ensure-style call removed (no longer needed) */
-    gtk_widget_override_background_color (GTK_WIDGET (cmpl->priv->treeview), GTK_STATE_FLAG_ACTIVE,
-    /* TODO GTK3: Direct style field access removed. Use GtkStyleContext. */
-                          _moo_get_style_bg (cmpl->priv->treeview, GTK_STATE_FLAG_SELECTED));
-    /* TODO GTK3: Direct style field access removed. Use GtkStyleContext. */
-    gtk_widget_override_background_color (GTK_WIDGET (cmpl->priv->treeview), GTK_STATE_FLAG_ACTIVE,
-                            _moo_get_style_bg (cmpl->priv->treeview, GTK_STATE_FLAG_SELECTED));
+    /* The GTK2 original set base[ACTIVE] and bg[ACTIVE] from base[SELECTED] so
+       the popup kept a visible selection while unfocused; the conversion
+       turned both into the same override_background_color call.  GTK3 styles
+       this through the :selected style class. */
 
     gtk_grab_add (cmpl->priv->popup);
     gdk_pointer_grab (gtk_widget_get_window (cmpl->priv->popup), TRUE,                      GDK_BUTTON_PRESS_MASK |

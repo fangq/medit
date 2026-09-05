@@ -119,8 +119,6 @@ static void     moo_paned_map               (GtkWidget      *widget);
 static void     moo_paned_unmap             (GtkWidget      *widget);
 static gboolean moo_paned_focus             (GtkWidget      *widget,
                                              GtkDirectionType direction);
-static void     moo_paned_style_set         (GtkWidget      *widget,
-                                             GtkStyle       *old_style);
 
 static void     moo_paned_set_focus_child   (GtkContainer *container,
                                              GtkWidget      *widget);
@@ -239,7 +237,6 @@ moo_paned_class_init (MooPanedClass *klass)
 
     widget_class->realize = moo_paned_realize;
     widget_class->unrealize = moo_paned_unrealize;
-    widget_class->style_set = moo_paned_style_set;
     widget_class->map = moo_paned_map;
     widget_class->unmap = moo_paned_unmap;
     widget_class->draw = moo_paned_expose;
@@ -616,18 +613,6 @@ _moo_paned_get_position (MooPaned *paned)
 {
     g_return_val_if_fail (MOO_IS_PANED (paned), 0);
     return paned->priv->pane_position;
-}
-
-
-static void
-moo_paned_style_set (GtkWidget *widget,
-                     G_GNUC_UNUSED GtkStyle *old_style)
-{
-    MooPaned *paned = MOO_PANED (widget);
-
-    /* GTK3: Background is now managed by CSS theme.
-       gdk_window_set_background_* calls removed. */
-    (void) paned;
 }
 
 static void

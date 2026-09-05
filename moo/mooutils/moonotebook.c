@@ -166,8 +166,7 @@ static void     moo_notebook_get_property   (GObject        *object,
                                              GValue         *value,
                                              GParamSpec     *pspec);
 
-static void     moo_notebook_style_set      (GtkWidget      *widget,
-                                             GtkStyle       *prev_style);
+static void     moo_notebook_style_updated  (GtkWidget      *widget);
 static void     moo_notebook_realize        (GtkWidget      *widget);
 static void     moo_notebook_unrealize      (GtkWidget      *widget);
 static void     moo_notebook_map            (GtkWidget      *widget);
@@ -361,7 +360,7 @@ static void moo_notebook_class_init (MooNotebookClass *klass)
 #if 0
     widget_class->parent_set = moo_notebook_parent_set;
 #endif
-    widget_class->style_set = moo_notebook_style_set;
+    widget_class->style_updated = moo_notebook_style_updated;
     widget_class->realize = moo_notebook_realize;
     widget_class->unrealize = moo_notebook_unrealize;
     widget_class->map = moo_notebook_map;
@@ -1139,14 +1138,14 @@ moo_notebook_realize (GtkWidget *widget)
 }
 
 
+/* GTK3 emits "style-updated", not "style-set".  The tab window's background
+ * comes from CSS now, so there is nothing to do beyond chaining up -- and it
+ * chains to GtkContainer rather than GtkNotebook on purpose. */
 static void
-moo_notebook_style_set (GtkWidget *widget,
-                        GtkStyle  *prev_style)
+moo_notebook_style_updated (GtkWidget *widget)
 {
-    /* GTK3: the tab window's background comes from CSS now, so there is
-       nothing to do here beyond chaining up. */
-    if (GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_set)
-        GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_set (widget, prev_style);
+    if (GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_updated)
+        GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_updated (widget);
 }
 
 
@@ -2276,8 +2275,21 @@ moo_notebook_draw_label (MooNotebook    *nb,
     if (page == nb->priv->current_page &&
         page->label->width > 0 && height > 0)
     {
-        GdkRGBA highlight = {0.3, 0.6, 1.0, 0.8};
+        /* Take the bar colour from the theme's selection colour rather than
+           hardcoding a blue that clashes with every non-default theme. */
+        GdkRGBA highlight;
         int bar_height = 3;
+
+        if (!gtk_style_context_lookup_color (context, "theme_selected_bg_color",
+                                             &highlight))
+        {
+            gtk_style_context_save (context);
+            gtk_style_context_set_state (context, GTK_STATE_FLAG_SELECTED);
+            gtk_style_context_get_color (context, GTK_STATE_FLAG_SELECTED,
+                                         &highlight);
+            gtk_style_context_restore (context);
+        }
+        highlight.alpha = 0.8;
 
         cairo_save (cr);
         gdk_cairo_set_source_rgba (cr, &highlight);

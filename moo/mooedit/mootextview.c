@@ -90,8 +90,7 @@ static gboolean moo_text_view_scroll_event (GtkWidget *widget, GdkEventScroll *e
 static void     moo_text_view_unrealize     (GtkWidget          *widget);
 static gboolean moo_text_view_expose        (GtkWidget          *widget,
                                              cairo_t            *cr);
-static void     moo_text_view_style_set     (GtkWidget          *widget,
-                                             GtkStyle           *previous_style);
+static void     moo_text_view_style_updated (GtkWidget          *widget);
 static void     moo_text_view_size_request  (GtkWidget          *widget,
                                              GtkRequisition     *requisition);
 static void     moo_text_view_get_preferred_width (GtkWidget    *widget,
@@ -986,7 +985,7 @@ static void moo_text_view_class_init (MooTextViewClass *klass)
     widget_class->scroll_event = moo_text_view_scroll_event;
     widget_class->unrealize = moo_text_view_unrealize;
     widget_class->draw = moo_text_view_expose;
-    widget_class->style_set = moo_text_view_style_set;
+    widget_class->style_updated = moo_text_view_style_updated;
     widget_class->get_preferred_width = moo_text_view_get_preferred_width;
     widget_class->get_preferred_height = moo_text_view_get_preferred_height;
     widget_class->size_allocate = moo_text_view_size_allocate;
@@ -5730,9 +5729,10 @@ set_show_line_marks (MooTextView *view,
 }
 
 
+/* GTK3 emits "style-updated", not "style-set"; this never ran, so a theme
+ * change left the cached colours, tab width and left margin stale. */
 static void
-moo_text_view_style_set (GtkWidget *widget,
-                         GtkStyle  *prev_style)
+moo_text_view_style_updated (GtkWidget *widget)
 {
     MooTextView *view = MOO_TEXT_VIEW (widget);
 
@@ -5741,7 +5741,7 @@ moo_text_view_style_set (GtkWidget *widget,
     update_tab_width (view);
     update_left_margin (view);
 
-    GTK_WIDGET_CLASS(moo_text_view_parent_class)->style_set (widget, prev_style);
+    GTK_WIDGET_CLASS(moo_text_view_parent_class)->style_updated (widget);
 }
 
 
