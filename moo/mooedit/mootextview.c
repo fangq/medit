@@ -383,6 +383,9 @@ static void     set_draw_whitespace         (MooTextView        *view,
 
 static void     buffer_changed              (MooTextView        *view);
 static void     update_left_margin          (MooTextView        *view);
+static void     moo_text_view_draw_layer    (GtkTextView        *text_view,
+                                             GtkTextViewLayer    layer,
+                                             cairo_t            *cr);
 static void     draw_left_margin            (MooTextView        *view,
                                              cairo_t *cr_param);
 static void     draw_marks_background       (MooTextView        *view,
@@ -996,6 +999,7 @@ static void moo_text_view_class_init (MooTextViewClass *klass)
     text_view_class->cut_clipboard = moo_text_view_cut_clipboard;
     text_view_class->paste_clipboard = moo_text_view_paste_clipboard;
     text_view_class->populate_popup = (void(*)(GtkTextView*,GtkWidget*)) moo_text_view_populate_popup;
+    text_view_class->draw_layer = moo_text_view_draw_layer;
 
     klass->extend_selection = _moo_text_view_extend_selection;
     klass->find_word_at_cursor = find_word_at_cursor;
@@ -4578,6 +4582,53 @@ moo_text_view_draw_long_line_markers (GtkTextView *text_view,
     cairo_restore (cr);
 }
 
+/* Decorations that must appear underneath the text.
+ *
+ * GtkTextView hands ::draw_layer a cairo_t already transformed to the text
+ * window and translated by the scroll offset, i.e. buffer coordinates map
+ * directly.  The helpers below predate GTK3 and still work in text-window
+ * coordinates, so translate by the buffer position of the window origin
+ * first; that is the identity when the view is scrolled to the top. */
+static void
+moo_text_view_draw_layer (GtkTextView      *text_view,
+                          GtkTextViewLayer  layer,
+                          cairo_t          *cr)
+{
+    MooTextView *view = MOO_TEXT_VIEW (text_view);
+    int win_x, win_y;
+
+    if (layer != GTK_TEXT_VIEW_LAYER_BELOW_TEXT)
+        return;
+
+    if (!gtk_widget_get_sensitive (GTK_WIDGET (view)))
+        return;
+
+    gtk_text_view_window_to_buffer_coords (text_view, GTK_TEXT_WINDOW_TEXT,
+                                           0, 0, &win_x, &win_y);
+
+    cairo_save (cr);
+    cairo_translate (cr, win_x, win_y);
+
+    if ((gtk_widget_has_focus (GTK_WIDGET (view)) ||
+         view->priv->highlight_current_line_unfocused)
+        && view->priv->color_settings[MOO_TEXT_VIEW_COLOR_CURRENT_LINE]
+        && view->priv->gcs[MOO_TEXT_VIEW_COLOR_CURRENT_LINE])
+    {
+        moo_text_view_draw_current_line (text_view, cr);
+    }
+
+    if (gtk_widget_has_focus (GTK_WIDGET (view)) &&
+        view->priv->color_settings[MOO_TEXT_VIEW_COLOR_RIGHT_MARGIN] &&
+        view->priv->gcs[MOO_TEXT_VIEW_COLOR_RIGHT_MARGIN])
+    {
+        moo_text_view_draw_right_margin (text_view, cr);
+    }
+
+    draw_marks_background (view, cr);
+
+    cairo_restore (cr);
+}
+
 static gboolean
 moo_text_view_expose (GtkWidget      *widget,
                       cairo_t *cr)
@@ -4596,27 +4647,15 @@ moo_text_view_expose (GtkWidget      *widget,
     if (view->priv->update_n_lines_idle)
         update_n_lines_idle (view);
 
-    if (gtk_widget_get_sensitive (GTK_WIDGET (view)) &&
-        text_window && GDK_IS_WINDOW(text_window) && gtk_cairo_should_draw_window (cr, text_window))
-    {
-        if ((gtk_widget_has_focus (GTK_WIDGET (view)) ||
-             view->priv->highlight_current_line_unfocused)
-            && view->priv->color_settings[MOO_TEXT_VIEW_COLOR_CURRENT_LINE]
-            && view->priv->gcs[MOO_TEXT_VIEW_COLOR_CURRENT_LINE])
-        {
-            moo_text_view_draw_current_line (text_view, cr);
-        }
-
-        if (gtk_widget_has_focus (GTK_WIDGET (view)) &&
-            view->priv->color_settings[MOO_TEXT_VIEW_COLOR_RIGHT_MARGIN] &&
-            view->priv->gcs[MOO_TEXT_VIEW_COLOR_RIGHT_MARGIN])
-                moo_text_view_draw_right_margin (text_view, cr);
-    }
+    /* The current-line highlight, the right margin and the mark backgrounds
+       all belong *under* the text, and are drawn from ::draw_layer -- see
+       moo_text_view_draw_layer below.  Drawing them here, before chaining up,
+       put them in the wrong coordinate space (this cairo_t is widget-relative,
+       while they compute text-window coordinates) and GtkTextView then painted
+       its own background straight over the top of them. */
 
     if (left_window && GDK_IS_WINDOW(left_window) && gtk_cairo_should_draw_window (cr, left_window))
         draw_left_margin (view, cr);
-    if (text_window && GDK_IS_WINDOW(text_window) && gtk_cairo_should_draw_window (cr, text_window))
-        draw_marks_background (view, cr);
 
     if (text_window && GDK_IS_WINDOW(text_window) && gtk_cairo_should_draw_window (cr, text_window))
     {
