@@ -389,12 +389,12 @@ am___moo_la_SOURCES_DIST = medit-module/medit-module.cpp moo-config.h \
 	plugins/moofileselector-prefs.cpp plugins/moofileselector.cpp \
 	plugins/moofileselector.h plugins/mooplugin-builtin.h \
 	plugins/mooplugin-builtin.cpp plugins/moofilelist.cpp \
-	plugins/moofind.cpp plugins/moomarkdown.cpp \
-	plugins/mooterminal.c plugins/ctags/readtags.c \
-	plugins/ctags/readtags.h plugins/ctags/readtags-mangle.h \
-	plugins/ctags/ctags-plugin.c plugins/ctags/ctags-doc.c \
-	plugins/ctags/ctags-doc.h plugins/ctags/ctags-view.c \
-	plugins/ctags/ctags-view.h plugins/usertools/moousertools.cpp \
+	plugins/moofind.cpp plugins/mooterminal.c \
+	plugins/ctags/readtags.c plugins/ctags/readtags.h \
+	plugins/ctags/readtags-mangle.h plugins/ctags/ctags-plugin.c \
+	plugins/ctags/ctags-doc.c plugins/ctags/ctags-doc.h \
+	plugins/ctags/ctags-view.c plugins/ctags/ctags-view.h \
+	plugins/usertools/moousertools.cpp \
 	plugins/usertools/moousertools.h \
 	plugins/usertools/moousertools-prefs.cpp \
 	plugins/usertools/moousertools-prefs.h \
@@ -564,8 +564,8 @@ am__objects_17 = plugins/_moo_la-moofileselector-prefs.lo \
 	plugins/_moo_la-moofileselector.lo \
 	plugins/_moo_la-mooplugin-builtin.lo \
 	plugins/_moo_la-moofilelist.lo plugins/_moo_la-moofind.lo \
-	plugins/_moo_la-moomarkdown.lo $(am__objects_15) \
-	$(am__objects_16) plugins/usertools/_moo_la-moousertools.lo \
+	$(am__objects_15) $(am__objects_16) \
+	plugins/usertools/_moo_la-moousertools.lo \
 	plugins/usertools/_moo_la-moousertools-prefs.lo \
 	plugins/usertools/_moo_la-moocommand.lo \
 	plugins/usertools/_moo_la-moocommanddisplay.lo \
@@ -795,12 +795,12 @@ am__medit_SOURCES_DIST = medit-app/mem-debug.h medit-app/run-tests.h \
 	plugins/moofileselector-prefs.cpp plugins/moofileselector.cpp \
 	plugins/moofileselector.h plugins/mooplugin-builtin.h \
 	plugins/mooplugin-builtin.cpp plugins/moofilelist.cpp \
-	plugins/moofind.cpp plugins/moomarkdown.cpp \
-	plugins/mooterminal.c plugins/ctags/readtags.c \
-	plugins/ctags/readtags.h plugins/ctags/readtags-mangle.h \
-	plugins/ctags/ctags-plugin.c plugins/ctags/ctags-doc.c \
-	plugins/ctags/ctags-doc.h plugins/ctags/ctags-view.c \
-	plugins/ctags/ctags-view.h plugins/usertools/moousertools.cpp \
+	plugins/moofind.cpp plugins/mooterminal.c \
+	plugins/ctags/readtags.c plugins/ctags/readtags.h \
+	plugins/ctags/readtags-mangle.h plugins/ctags/ctags-plugin.c \
+	plugins/ctags/ctags-doc.c plugins/ctags/ctags-doc.h \
+	plugins/ctags/ctags-view.c plugins/ctags/ctags-view.h \
+	plugins/usertools/moousertools.cpp \
 	plugins/usertools/moousertools.h \
 	plugins/usertools/moousertools-prefs.cpp \
 	plugins/usertools/moousertools-prefs.h \
@@ -959,8 +959,8 @@ am__objects_39 = plugins/moofileselector-prefs.$(OBJEXT) \
 	plugins/moofileselector.$(OBJEXT) \
 	plugins/mooplugin-builtin.$(OBJEXT) \
 	plugins/moofilelist.$(OBJEXT) plugins/moofind.$(OBJEXT) \
-	plugins/moomarkdown.$(OBJEXT) $(am__objects_37) \
-	$(am__objects_38) plugins/usertools/moousertools.$(OBJEXT) \
+	$(am__objects_37) $(am__objects_38) \
+	plugins/usertools/moousertools.$(OBJEXT) \
 	plugins/usertools/moousertools-prefs.$(OBJEXT) \
 	plugins/usertools/moocommand.$(OBJEXT) \
 	plugins/usertools/moocommanddisplay.$(OBJEXT) \
@@ -1295,13 +1295,12 @@ am__depfiles_remade = ./$(DEPDIR)/_moo_la-marshals.Plo \
 	plugins/$(DEPDIR)/_moo_la-moofileselector-prefs.Plo \
 	plugins/$(DEPDIR)/_moo_la-moofileselector.Plo \
 	plugins/$(DEPDIR)/_moo_la-moofind.Plo \
-	plugins/$(DEPDIR)/_moo_la-moomarkdown.Plo \
 	plugins/$(DEPDIR)/_moo_la-mooplugin-builtin.Plo \
 	plugins/$(DEPDIR)/_moo_la-mooterminal.Plo \
 	plugins/$(DEPDIR)/moofilelist.Po \
 	plugins/$(DEPDIR)/moofileselector-prefs.Po \
 	plugins/$(DEPDIR)/moofileselector.Po \
-	plugins/$(DEPDIR)/moofind.Po plugins/$(DEPDIR)/moomarkdown.Po \
+	plugins/$(DEPDIR)/moofind.Po \
 	plugins/$(DEPDIR)/mooplugin-builtin.Po \
 	plugins/$(DEPDIR)/mooterminal.Po \
 	plugins/ctags/$(DEPDIR)/_moo_la-ctags-doc.Plo \
@@ -2136,9 +2135,8 @@ moo_libadd = $(am__append_12)
 plugins_sources = plugins/moofileselector-prefs.cpp \
 	plugins/moofileselector.cpp plugins/moofileselector.h \
 	plugins/mooplugin-builtin.h plugins/mooplugin-builtin.cpp \
-	plugins/moofilelist.cpp plugins/moofind.cpp \
-	plugins/moomarkdown.cpp $(am__append_17) $(am__append_18) \
-	plugins/usertools/moousertools.cpp \
+	plugins/moofilelist.cpp plugins/moofind.cpp $(am__append_17) \
+	$(am__append_18) plugins/usertools/moousertools.cpp \
 	plugins/usertools/moousertools.h \
 	plugins/usertools/moousertools-prefs.cpp \
 	plugins/usertools/moousertools-prefs.h \
@@ -3036,8 +3034,6 @@ plugins/_moo_la-moofilelist.lo: plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/_moo_la-moofind.lo: plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
-plugins/_moo_la-moomarkdown.lo: plugins/$(am__dirstamp) \
-	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/_moo_la-mooterminal.lo: plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/ctags/$(am__dirstamp):
@@ -3445,8 +3441,6 @@ plugins/moofilelist.$(OBJEXT): plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/moofind.$(OBJEXT): plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
-plugins/moomarkdown.$(OBJEXT): plugins/$(am__dirstamp) \
-	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/mooterminal.$(OBJEXT): plugins/$(am__dirstamp) \
 	plugins/$(DEPDIR)/$(am__dirstamp)
 plugins/ctags/readtags.$(OBJEXT): plugins/ctags/$(am__dirstamp) \
@@ -3849,14 +3843,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-moofileselector-prefs.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-moofileselector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-moofind.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-moomarkdown.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-mooplugin-builtin.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/_moo_la-mooterminal.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/moofilelist.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/moofileselector-prefs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/moofileselector.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/moofind.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/moomarkdown.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/mooplugin-builtin.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/$(DEPDIR)/mooterminal.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@plugins/ctags/$(DEPDIR)/_moo_la-ctags-doc.Plo@am__quote@ # am--include-marker
@@ -5129,13 +5121,6 @@ plugins/_moo_la-moofind.lo: plugins/moofind.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_moo_la_CXXFLAGS) $(CXXFLAGS) -c -o plugins/_moo_la-moofind.lo `test -f 'plugins/moofind.cpp' || echo '$(srcdir)/'`plugins/moofind.cpp
 
-plugins/_moo_la-moomarkdown.lo: plugins/moomarkdown.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_moo_la_CXXFLAGS) $(CXXFLAGS) -MT plugins/_moo_la-moomarkdown.lo -MD -MP -MF plugins/$(DEPDIR)/_moo_la-moomarkdown.Tpo -c -o plugins/_moo_la-moomarkdown.lo `test -f 'plugins/moomarkdown.cpp' || echo '$(srcdir)/'`plugins/moomarkdown.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) plugins/$(DEPDIR)/_moo_la-moomarkdown.Tpo plugins/$(DEPDIR)/_moo_la-moomarkdown.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='plugins/moomarkdown.cpp' object='plugins/_moo_la-moomarkdown.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_moo_la_CXXFLAGS) $(CXXFLAGS) -c -o plugins/_moo_la-moomarkdown.lo `test -f 'plugins/moomarkdown.cpp' || echo '$(srcdir)/'`plugins/moomarkdown.cpp
-
 plugins/usertools/_moo_la-moousertools.lo: plugins/usertools/moousertools.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(_moo_la_CXXFLAGS) $(CXXFLAGS) -MT plugins/usertools/_moo_la-moousertools.lo -MD -MP -MF plugins/usertools/$(DEPDIR)/_moo_la-moousertools.Tpo -c -o plugins/usertools/_moo_la-moousertools.lo `test -f 'plugins/usertools/moousertools.cpp' || echo '$(srcdir)/'`plugins/usertools/moousertools.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) plugins/usertools/$(DEPDIR)/_moo_la-moousertools.Tpo plugins/usertools/$(DEPDIR)/_moo_la-moousertools.Plo
@@ -6071,14 +6056,12 @@ distclean: distclean-am
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofileselector-prefs.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofileselector.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofind.Plo
-	-rm -f plugins/$(DEPDIR)/_moo_la-moomarkdown.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-mooplugin-builtin.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-mooterminal.Plo
 	-rm -f plugins/$(DEPDIR)/moofilelist.Po
 	-rm -f plugins/$(DEPDIR)/moofileselector-prefs.Po
 	-rm -f plugins/$(DEPDIR)/moofileselector.Po
 	-rm -f plugins/$(DEPDIR)/moofind.Po
-	-rm -f plugins/$(DEPDIR)/moomarkdown.Po
 	-rm -f plugins/$(DEPDIR)/mooplugin-builtin.Po
 	-rm -f plugins/$(DEPDIR)/mooterminal.Po
 	-rm -f plugins/ctags/$(DEPDIR)/_moo_la-ctags-doc.Plo
@@ -6483,14 +6466,12 @@ maintainer-clean: maintainer-clean-am
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofileselector-prefs.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofileselector.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-moofind.Plo
-	-rm -f plugins/$(DEPDIR)/_moo_la-moomarkdown.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-mooplugin-builtin.Plo
 	-rm -f plugins/$(DEPDIR)/_moo_la-mooterminal.Plo
 	-rm -f plugins/$(DEPDIR)/moofilelist.Po
 	-rm -f plugins/$(DEPDIR)/moofileselector-prefs.Po
 	-rm -f plugins/$(DEPDIR)/moofileselector.Po
 	-rm -f plugins/$(DEPDIR)/moofind.Po
-	-rm -f plugins/$(DEPDIR)/moomarkdown.Po
 	-rm -f plugins/$(DEPDIR)/mooplugin-builtin.Po
 	-rm -f plugins/$(DEPDIR)/mooterminal.Po
 	-rm -f plugins/ctags/$(DEPDIR)/_moo_la-ctags-doc.Plo
