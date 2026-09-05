@@ -1015,7 +1015,8 @@ moo_expander_cell_render (GtkCellRenderer      *cell,
     MooExpanderCell *exp_cell = MOO_EXPANDER_CELL (cell);
     GdkRectangle pix_rect;
     GdkRectangle draw_rect;
-    G_GNUC_UNUSED GtkStateFlags state_flags = GTK_STATE_FLAG_NORMAL;
+    GtkStyleContext *ctx;
+    GtkStateFlags state_flags;
 
     moo_expander_cell_get_size (cell, widget, cell_area,
                                 &pix_rect.x,
@@ -1030,6 +1031,8 @@ moo_expander_cell_render (GtkCellRenderer      *cell,
 
     if (!gdk_rectangle_intersect (cell_area, &pix_rect, &draw_rect))
             return;
+
+    state_flags = gtk_widget_get_state_flags (widget);
 
     if (!gtk_cell_renderer_get_sensitive (cell))
     {
@@ -1047,24 +1050,17 @@ moo_expander_cell_render (GtkCellRenderer      *cell,
         state_flags = GTK_STATE_FLAG_PRELIGHT;
     }
 
-    /* TODO GTK3: gdk_draw_rectangle removed. Needs cairo context (cr) */
+    if (exp_cell->expanded)
+        state_flags |= GTK_STATE_FLAG_CHECKED;
 
-
-    /* TODO GTK3: Direct style field access removed. Use GtkStyleContext. */
-    /* Original GC: gtk_widget_get_style (widget)->text_gc[state] on window */
-
-
-    /* cairo_rectangle (cr, pix_rect.x, pix_rect.y, pix_rect.width, pix_rect.height); */
-
-
-    /* cairo_stroke (cr); */;
-            cairo_move_to (cr, pix_rect.x + 2, pix_rect.y + pix_rect.height / 2);
-        cairo_line_to (cr, pix_rect.x + pix_rect.width - 2, pix_rect.y + pix_rect.height / 2);
-        cairo_stroke (cr);;
-    if (!exp_cell->expanded)
-                cairo_move_to (cr, pix_rect.x + pix_rect.width / 2, pix_rect.y + 2);
-        cairo_line_to (cr, pix_rect.x + pix_rect.width / 2, pix_rect.y + pix_rect.height - 2);
-        cairo_stroke (cr);;
+    ctx = gtk_widget_get_style_context (widget);
+    gtk_style_context_save (ctx);
+    gtk_style_context_add_class (ctx, GTK_STYLE_CLASS_EXPANDER);
+    gtk_style_context_set_state (ctx, state_flags);
+    gtk_render_expander (ctx, cr,
+                         pix_rect.x, pix_rect.y,
+                         pix_rect.width, pix_rect.height);
+    gtk_style_context_restore (ctx);
 }
 
 static void

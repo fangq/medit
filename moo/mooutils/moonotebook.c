@@ -1139,11 +1139,8 @@ static void
 moo_notebook_style_set (GtkWidget *widget,
                         GtkStyle  *prev_style)
 {
-    MooNotebook *nb = MOO_NOTEBOOK (widget);
-
-    if (nb->priv->tab_window)
-        /* GTK3: background from CSS */
-
+    /* GTK3: the tab window's background comes from CSS now, so there is
+       nothing to do here beyond chaining up. */
     if (GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_set)
         GTK_WIDGET_CLASS(moo_notebook_grand_parent_class)->style_set (widget, prev_style);
 }

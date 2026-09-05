@@ -105,7 +105,7 @@ struct _MooAppPrivate {
 
     MooUiXml   *ui_xml;
     const char *default_ui;
-    guint       quit_handler_id;
+    guint       check_signal_id;
 
 #ifdef MOO_USE_QUARTZ
     IgeMacDock *dock;
@@ -741,7 +741,7 @@ moo_app_send_msg (const char *pid,
 static gboolean
 on_gtk_main_quit (MooApp *app)
 {
-    app->priv->quit_handler_id = 0;
+    app->priv->check_signal_id = 0;
 
     if (!moo_app_quit (app))
         moo_app_do_quit (app);
@@ -852,8 +852,11 @@ moo_app_do_quit (MooApp *app)
     moo_app_write_session (app);
     moo_app_save_prefs (app);
 
-    if (app->priv->quit_handler_id)
-        /* GTK3: gtk_quit_remove removed */
+    if (app->priv->check_signal_id)
+    {
+        g_source_remove (app->priv->check_signal_id);
+        app->priv->check_signal_id = 0;
+    }
 
     i = 0;
     while (gtk_main_level () && i < 1000)
@@ -903,10 +906,11 @@ moo_app_run (MooApp *app)
 
     app->priv->running = TRUE;
 
-    app->priv->quit_handler_id =
-            /* GTK3: gtk_quit_add removed; quit handler called after gtk_main() */
-
-    g_timeout_add (100, (GSourceFunc)(void(*)(void)) check_signal, NULL);
+    /* GTK3: gtk_quit_add() was removed; the quit handler now runs after
+       gtk_main() returns.  Keep the source id so moo_app_do_quit() can stop
+       the poll instead of leaking it past shutdown. */
+    app->priv->check_signal_id =
+        g_timeout_add (100, (GSourceFunc)(void(*)(void)) check_signal, NULL);
 
 #ifndef __WIN32__
     app->priv->sm_client = egg_sm_client_get ();
