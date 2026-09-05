@@ -26,6 +26,27 @@ project(medit
     LANGUAGES C CXX
 )
 
+# ── Build type ────────────────────────────────────────────────────────────────
+# Without a default, "cmake .. && make" (what the README tells people to run)
+# built with neither -O nor -g, while still defining NDEBUG/G_DISABLE_ASSERT.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+        "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+                 Debug Release RelWithDebInfo MinSizeRel)
+    message(STATUS "No CMAKE_BUILD_TYPE given; defaulting to RelWithDebInfo")
+endif()
+
+# ── Language standards ────────────────────────────────────────────────────────
+# C was previously left at whatever the compiler defaults to -- gcc 14 defaults
+# to gnu23, which this 2004-era C is not written for.  C++ was pinned only by a
+# raw -std=c++11 flag in MooCompilerFlags.cmake.
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # ── Module search path ────────────────────────────────────────────────────────
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -174,6 +195,25 @@ option(MOO_ENABLE_COVERAGE "Enable code-coverage instrumentation" OFF)
 if(MOO_ENABLE_COVERAGE)
     add_compile_options(--coverage)
     add_link_options(--coverage)
+endif()
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+# Must be at the top level: enable_testing() called from moo/CMakeLists.txt only
+# registered tests for that subdirectory, so `ctest` run from the build root
+# found none.
+include(CTest)
+enable_testing()
+
+# ── Sanitizers ────────────────────────────────────────────────────────────────
+# e.g. cmake .. -DCMAKE_BUILD_TYPE=Debug -DMOO_SANITIZE=address,undefined
+set(MOO_SANITIZE "" CACHE STRING
+    "Comma-separated -fsanitize= list (e.g. address,undefined); empty to disable")
+if(MOO_SANITIZE)
+    message(STATUS "Sanitizers: ${MOO_SANITIZE}")
+    add_compile_options(-fsanitize=${MOO_SANITIZE}
+                        -fno-omit-frame-pointer
+                        -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=${MOO_SANITIZE})
 endif()
 
 # ── Install hooks (gtk-update-icon-cache) ─────────────────────────────────────

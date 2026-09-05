@@ -59,12 +59,19 @@ macro(moo_collect_compiler_flags)
     set(MOO_EXTRA_CXXFLAGS "")
 
     if(MOO_GCC)
+        # Deprecation warnings are noisy while GtkAction/GtkUIManager are still
+        # in use, so they are silenced by default -- but not in strict mode,
+        # which is where the remaining GTK3 deprecations should be visible.
+        if(NOT MOO_STRICT_MODE)
+            _moo_check_c_flag(-Wno-deprecated-declarations   MOO_EXTRA_CFLAGS)
+            _moo_check_cxx_flag(-Wno-deprecated-declarations MOO_EXTRA_CXXFLAGS)
+        endif()
+
         # Common warning/safety flags
         foreach(flag
             -Wall -Wextra -fexceptions -fno-strict-aliasing
             -Wno-missing-field-initializers
             -Wno-format-y2k -Wno-overlength-strings
-            -Wno-deprecated-declarations
         )
             _moo_check_c_flag("${flag}"   MOO_EXTRA_CFLAGS)
             _moo_check_cxx_flag("${flag}" MOO_EXTRA_CXXFLAGS)
@@ -77,16 +84,17 @@ macro(moo_collect_compiler_flags)
 
         # Debug vs release extras
         if(MOO_ENABLE_DEBUG)
-            _moo_check_c_flag(-ftrapv   MOO_EXTRA_CFLAGS)
-            _moo_check_cxx_flag(-ftrapv MOO_EXTRA_CXXFLAGS)
+            # (-ftrapv used to be added here; it aborts the process on any
+            #  signed overflow in this 2004-era C.  Use -DMOO_SANITIZE=... for
+            #  the same diagnosis with a usable report.)
         else()
             _moo_check_cxx_flag(-fno-enforce-eh-specs MOO_EXTRA_CXXFLAGS)
         endif()
 
         # Strict mode
         if(MOO_STRICT_MODE)
-            list(APPEND MOO_EXTRA_CFLAGS   -Werror)
-            list(APPEND MOO_EXTRA_CXXFLAGS -Werror)
+            set(MOO_EXTRA_CFLAGS   "${MOO_EXTRA_CFLAGS} -Werror")
+            set(MOO_EXTRA_CXXFLAGS "${MOO_EXTRA_CXXFLAGS} -Werror")
 
             foreach(flag
                 -Wpointer-arith -Wsign-compare -Wreturn-type

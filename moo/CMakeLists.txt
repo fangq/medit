@@ -1054,8 +1054,12 @@ if(MOO_BUILD_APP)
     endif()
 
     target_include_directories(medit PRIVATE
-        "${_src}"
+        # The generated tree must come first: mooedit/mooeditprefs-general-gxml.h
+        # is produced by moo_glade2c into ${_bin}, and a stale copy used to be
+        # committed in the source tree.  With ${_src} first, that stale copy won
+        # and edits to the .glade file appeared to do nothing.
         "${_bin}"
+        "${_src}"
         "${_src}/moofileview"
         "${_src}/moofileview/glade"
         "${_src}/plugins/support"
@@ -1165,16 +1169,19 @@ if(MOO_BUILD_APP)
         endif()
     endif()
 
-    # CTest integration for run-tests-uninstalled.sh
-    enable_testing()
+    # CTest integration for run-tests-uninstalled.sh.
+    # enable_testing()/include(CTest) live at the top level -- called from a
+    # subdirectory, `ctest` run from the top of the build tree reported
+    # "No tests were found".
     add_test(
         NAME    medit_uninstalled
         COMMAND "${_src}/medit-app/run-tests-uninstalled.sh"
-        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        # run-tests.sh looks for ./medit in the working directory
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:medit>"
     )
     set_tests_properties(medit_uninstalled PROPERTIES
         ENVIRONMENT
-            "EXEEXT=;top_srcdir=${_top};bindir=${CMAKE_INSTALL_FULL_BINDIR};PYTHON=${MOO_PYTHON};print_functions=${_src}/medit-app/print-functions.py$<$<NOT:$<BOOL:${MOO_ENABLE_COVERAGE}>>:;IGNORE_COVERAGE=1>"
+            "EXEEXT=;srcdir=${_src};top_srcdir=${_top};bindir=${CMAKE_INSTALL_FULL_BINDIR};PYTHON=${MOO_PYTHON};print_functions=${_src}/medit-app/print-functions.py$<$<NOT:$<BOOL:${MOO_ENABLE_COVERAGE}>>:;IGNORE_COVERAGE=1>"
     )
 endif()
 
