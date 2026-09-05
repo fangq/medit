@@ -333,7 +333,7 @@ moo_app_instance_init (MooApp *app)
 }
 
 
-#if defined(HAVE_SIGNAL)
+#if defined(HAVE_SIGNAL_H)
 static void
 setup_signals (void(*handler)(int))
 {
@@ -341,6 +341,12 @@ setup_signals (void(*handler)(int))
 #ifdef SIGHUP
     /* TODO: maybe detach from terminal in this case? */
     signal (SIGHUP, handler);
+#endif
+#ifdef SIGPIPE
+    /* Never let a write to a dead pipe kill the editor.  The terminal and
+       the gdb plugin both talk to subprocesses that can exit at any moment;
+       the write() should report EPIPE to the caller instead. */
+    signal (SIGPIPE, SIG_IGN);
 #endif
 }
 
@@ -368,7 +374,7 @@ moo_app_constructor (GType           type,
 
     object = moo_app_parent_class->constructor (type, n_params, params);
 
-#if defined(HAVE_SIGNAL) && defined(SIGINT)
+#if defined(HAVE_SIGNAL_H) && defined(SIGINT)
     setup_signals (sigint_handler);
 #endif
     moo_app_install_cleanup ();

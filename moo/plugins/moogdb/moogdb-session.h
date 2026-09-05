@@ -50,9 +50,16 @@ gboolean       moo_gdb_session_start     (MooGdbSession *session,
                                           const char    *target,
                                           GError       **error);
 
-/* Send "-gdb-exit" and wait for the subprocess to die.  Safe to call
- * even if the session was never started. */
+/* Send "-gdb-exit".  Fire-and-forget: the subprocess dies asynchronously and
+ * the read loop reports it via the "exited" signal.  Safe to call even if the
+ * session was never started. */
 void           moo_gdb_session_quit      (MooGdbSession *session);
+
+/* Hard teardown: cancel the read loop, force gdb down and mark the session
+ * EXITED.  The read loop holds a reference to the session, so an owner MUST
+ * call this before dropping its own reference -- otherwise the session (and
+ * the gdb process) leak for the lifetime of the application. */
+void           moo_gdb_session_shutdown  (MooGdbSession *session);
 
 /* Forward a raw command line to gdb's stdin.  Useful for the
  * console pane: any CLI command (e.g. "info threads", "print x",

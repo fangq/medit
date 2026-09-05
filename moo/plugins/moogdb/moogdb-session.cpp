@@ -187,6 +187,7 @@ moo_gdb_session_finalize (GObject *object)
         g_cancellable_cancel (s->cancellable);
         g_subprocess_force_exit (s->gdb);
         g_object_unref (s->gdb);
+        s->gdb = NULL;
     }
     g_clear_object (&s->gdb_out);
     g_clear_object (&s->cancellable);
@@ -687,6 +688,25 @@ moo_gdb_session_quit (MooGdbSession *s)
     send_command (s, "-gdb-exit", NULL, NULL);
 }
 
+void
+moo_gdb_session_shutdown (MooGdbSession *s)
+{
+    g_return_if_fail (MOO_IS_GDB_SESSION (s));
+
+    /* Cancelling is what releases the reference held by the outstanding
+       read (see start_read_loop), so this must be called before the owner
+       drops its own reference or the session is never finalized. */
+    g_cancellable_cancel (s->cancellable);
+
+    if (s->gdb) {
+        g_subprocess_force_exit (s->gdb);
+        g_clear_object (&s->gdb);
+    }
+    s->gdb_in = NULL;
+    g_clear_object (&s->gdb_out);
+    set_state (s, MOO_GDB_STATE_EXITED);
+}
+
 /* ── Raw command forwarding ──────────────────────────────────────── */
 
 void
@@ -709,6 +729,13 @@ send_command (MooGdbSession *s, const char *cmd,
               ResponseCB cb, gpointer user_data)
 {
     if (!s->gdb_in) return;
+    /* gdb_in stays non-NULL after gdb dies (it is owned by the GSubprocess),
+       so the state has to be checked as well -- otherwise this writes into a
+       closed pipe and raises SIGPIPE. */
+    if (s->state == MOO_GDB_STATE_EXITED || s->state == MOO_GDB_STATE_ERROR)
+        return;
+    if (g_cancellable_is_cancelled (s->cancellable))
+        return;
     int token = (int) s->next_token++;
     char *line = g_strdup_printf ("%d%s\n", token, cmd);
     g_output_stream_write_all (s->gdb_in, line, strlen (line),
@@ -729,9 +756,14 @@ send_command (MooGdbSession *s, const char *cmd,
 static void
 start_read_loop (MooGdbSession *s)
 {
+    /* The read is always outstanding while gdb lives, so it can still be
+       pending when the last reference to the session goes away.  Cancelling
+       does not abort the GTask -- it completes it on the next main-loop turn,
+       and the callback would then run on freed memory.  Hold a reference for
+       the duration of the read; on_line_async() drops it. */
     g_data_input_stream_read_line_async (
         s->gdb_out, G_PRIORITY_DEFAULT, s->cancellable,
-        on_line_async, s);
+        on_line_async, g_object_ref (s));
 }
 
 static void
@@ -744,10 +776,18 @@ on_line_async (GObject *source, GAsyncResult *res, gpointer user_data)
         G_DATA_INPUT_STREAM (source), res, &len, &err);
 
     if (!line) {
+        /* Cancelled means the session is going away (or already gone) -- do
+           not touch it beyond dropping our reference. */
+        if (err && g_error_matches (err, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+            g_error_free (err);
+            g_object_unref (s);
+            return;
+        }
         /* EOF or error → gdb is gone. */
         if (err) g_error_free (err);
         set_state (s, MOO_GDB_STATE_EXITED);
         g_signal_emit (s, signals[SIG_EXITED], 0);
+        g_object_unref (s);
         return;
     }
 
@@ -758,8 +798,10 @@ on_line_async (GObject *source, GAsyncResult *res, gpointer user_data)
         moo_gdb_mi_record_free (rec);
     }
 
-    /* Keep reading. */
+    /* Keep reading.  start_read_loop() takes its own reference, so ours is
+       released afterwards. */
     start_read_loop (s);
+    g_object_unref (s);
 }
 
 static void

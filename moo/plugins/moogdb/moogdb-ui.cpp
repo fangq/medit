@@ -1879,6 +1879,8 @@ on_session_running (G_GNUC_UNUSED MooGdbSession *s, gpointer user_data)
     if (win->hover_pending) g_hash_table_remove_all (win->hover_pending);
 }
 
+static void drop_session (MooGdbWin *win);
+
 static void
 on_session_exited (G_GNUC_UNUSED MooGdbSession *s, gpointer user_data)
 {
@@ -1886,6 +1888,9 @@ on_session_exited (G_GNUC_UNUSED MooGdbSession *s, gpointer user_data)
     clear_exec_mark (win);
     if (win->hover_cache)   g_hash_table_remove_all (win->hover_cache);
     if (win->hover_pending) g_hash_table_remove_all (win->hover_pending);
+    /* gdb is gone; drop the dead session so the next Start spawns a new one
+       instead of writing commands into a closed pipe. */
+    drop_session (win);
 }
 
 /* Session "breakpoint-added" handler — gdb gave us a number; if we
@@ -1934,6 +1939,25 @@ on_session_bp_removed (G_GNUC_UNUSED MooGdbSession *s,
 /* Lazy session create — used when the user toggles a breakpoint
  * before they've launched the debugger.  Just enough state to track
  * breakpoints; -exec-run + execution control comes from Phase 5. */
+/* Tear the session down and forget it.
+ *
+ * moo_gdb_session_shutdown() must run before the unref: the session's async
+ * read loop holds a reference to itself, which only cancellation releases.
+ * Clearing win->session is what lets ensure_session() build a fresh one --
+ * without it, Stop followed by Start reused a session whose gdb was gone and
+ * wrote into a closed pipe. */
+static void
+drop_session (MooGdbWin *win)
+{
+    if (!win || !win->session) return;
+
+    MooGdbSession *s = win->session;
+    win->session = NULL;
+    g_signal_handlers_disconnect_by_data (s, win);
+    moo_gdb_session_shutdown (s);
+    g_object_unref (s);
+}
+
 static MooGdbSession *
 ensure_session (MooGdbWin *win)
 {
@@ -2542,7 +2566,8 @@ void moo_gdb_win_step_out  (MooGdbWin *win)
 void moo_gdb_win_pause     (MooGdbWin *win)
     { if (win && win->session) moo_gdb_session_pause      (win->session); }
 void moo_gdb_win_stop      (MooGdbWin *win)
-    { if (win && win->session) { moo_gdb_session_quit (win->session); } }
+    { if (win && win->session) { moo_gdb_session_quit (win->session);
+                                 drop_session (win); } }
 
 /* ── Configure-target dialog ─────────────────────────────────────── */
 
@@ -2698,10 +2723,7 @@ moo_gdb_win_free (MooGdbWin *win)
 
     clear_exec_mark (win);
 
-    if (win->session) {
-        moo_gdb_session_quit (win->session);
-        g_object_unref (win->session);
-    }
+    drop_session (win);
     if (win->active_doc_handler)
         g_signal_handler_disconnect (win->window, win->active_doc_handler);
     if (win->new_doc_handler)

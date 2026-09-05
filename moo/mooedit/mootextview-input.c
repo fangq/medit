@@ -1490,8 +1490,18 @@ drag_scroll_timeout_func (MooTextView *view)
     GtkTextBuffer *buffer;
     GtkTextWindowType win_type;
 
-    g_return_val_if_fail (view->priv->dnd.type == MOO_TEXT_VIEW_DRAG_SELECT ||
-                          view->priv->dnd.type == MOO_TEXT_VIEW_DRAG_SELECT_LINES, FALSE);
+    if (view->priv->dnd.type != MOO_TEXT_VIEW_DRAG_SELECT &&
+        view->priv->dnd.type != MOO_TEXT_VIEW_DRAG_SELECT_LINES)
+    {
+        /* The drag ended without stop_drag_scroll() being reached (see
+           clear_drag_stuff()).  Returning G_SOURCE_REMOVE destroys the source,
+           so the stored id must be cleared here too -- otherwise the next
+           stop_drag_scroll() or moo_text_view_unrealize() calls
+           g_source_remove() on a dead id, which is a GLib CRITICAL, and kills
+           an unrelated source if GLib has recycled the id in the meantime. */
+        view->priv->dnd.scroll_timeout = 0;
+        return G_SOURCE_REMOVE;
+    }
 
     text_view = GTK_TEXT_VIEW (view);
     buffer = gtk_text_view_get_buffer (text_view);
@@ -1525,7 +1535,7 @@ drag_scroll_timeout_func (MooTextView *view)
 
     gtk_text_view_scroll_mark_onscreen (text_view,
                                         gtk_text_buffer_get_insert (buffer));
-    return TRUE;
+    return G_SOURCE_CONTINUE;
 }
 
 
