@@ -1048,6 +1048,14 @@ on_button_press (VteTerminal *term, GdkEventButton *event, gpointer data)
     gtk_widget_show_all (menu);
     gtk_menu_popup_at_pointer (GTK_MENU (menu), (GdkEvent *)event);
 
+    /* A popped-down GtkMenu stays alive, owned by its own toplevel, so
+       without this the whole menu -- items, icons and the colour-scheme
+       submenu -- leaked on every right-click.  Parking it on the terminal
+       destroys the previous one when the next is built. */
+    g_object_ref_sink (menu);
+    g_object_set_data_full (G_OBJECT (term), "moo-terminal-popup-menu",
+                            menu, (GDestroyNotify) gtk_widget_destroy);
+
     return TRUE;
 }
 

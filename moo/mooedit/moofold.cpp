@@ -518,8 +518,7 @@ fold_free (MooFold *fold)
 
 
 /* Recursively free a fold and all its descendants.  Properly removes the
- * fold's line marks from the buffer (or skips marks already deleted).
- * The extra g_object_unref balances the ref added by moo_text_buffer_add_fold. */
+ * fold's line marks from the buffer (or skips marks already deleted). */
 static void
 fold_free_subtree (MooFold *fold)
 {
@@ -538,7 +537,6 @@ fold_free_subtree (MooFold *fold)
     }
 
     fold_free (fold);
-    g_object_unref (fold);  /* balance the ref added in moo_text_buffer_add_fold */
 }
 
 

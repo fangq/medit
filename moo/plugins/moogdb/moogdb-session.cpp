@@ -77,9 +77,22 @@ typedef void (*ResponseCB) (MooGdbSession *s,
                             gpointer        user_data);
 
 typedef struct {
-    ResponseCB cb;
-    gpointer   user_data;
+    ResponseCB     cb;
+    gpointer       user_data;
+    /* Frees user_data if the reply never arrives (gdb died with commands
+       outstanding).  Not called on the normal path -- there the callback
+       takes ownership, and the entry is stolen rather than removed. */
+    GDestroyNotify destroy;
 } PendingEntry;
+
+static void
+free_pending_entry (gpointer p)
+{
+    PendingEntry *pe = (PendingEntry *) p;
+    if (pe->destroy && pe->user_data)
+        pe->destroy (pe->user_data);
+    g_free (pe);
+}
 
 /* ── Signals ──────────────────────────────────────────────────────── */
 
@@ -109,7 +122,8 @@ static void  dispatch_record  (MooGdbSession *s, MooGdbMiRecord *r);
 static void  send_command     (MooGdbSession *s,
                                const char    *cmd,
                                ResponseCB     cb,
-                               gpointer       user_data);
+                               gpointer       user_data,
+                               GDestroyNotify destroy = NULL);
 static void  set_state        (MooGdbSession *s, MooGdbState st);
 static void  on_version_reply (MooGdbSession *s,
                                MooGdbMiRecord *r,
@@ -169,7 +183,7 @@ moo_gdb_session_init (MooGdbSession *s)
     s->state       = MOO_GDB_STATE_IDLE;
     s->next_token  = 1;
     s->pending     = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-                                             NULL, g_free);
+                                             NULL, free_pending_entry);
     s->cancellable = g_cancellable_new ();
     s->locals      = g_ptr_array_new_with_free_func (free_local);
     s->frames      = g_ptr_array_new_with_free_func (free_frame);
@@ -289,6 +303,14 @@ typedef struct {
 } EvalCtx;
 
 static void
+free_eval_ctx (gpointer p)
+{
+    EvalCtx *c = (EvalCtx *) p;
+    g_free (c->expr);
+    g_free (c);
+}
+
+static void
 on_eval_async_reply (MooGdbSession *s, MooGdbMiRecord *r, gpointer user_data)
 {
     EvalCtx *ctx = (EvalCtx *) user_data;
@@ -332,7 +354,7 @@ moo_gdb_session_eval_async (MooGdbSession *s, const char *expr,
     char *esc = g_strescape (expr, "");
     char *cmd = g_strdup_printf ("-data-evaluate-expression \"%s\"", esc);
     g_free (esc);
-    send_command (s, cmd, on_eval_async_reply, ctx);
+    send_command (s, cmd, on_eval_async_reply, ctx, free_eval_ctx);
     g_free (cmd);
 }
 
@@ -343,6 +365,14 @@ typedef struct {
     MooGdbVarCreateCb cb;
     gpointer user_data;
 } VarCreateCtx;
+
+static void
+free_var_create_ctx (gpointer p)
+{
+    VarCreateCtx *c = (VarCreateCtx *) p;
+    g_free (c->expr);
+    g_free (c);
+}
 
 static void
 on_var_create_reply (MooGdbSession *s, MooGdbMiRecord *r, gpointer user_data)
@@ -399,7 +429,7 @@ moo_gdb_session_var_create (MooGdbSession *s, const char *expr,
     char *esc = g_strescape (expr, "");
     char *cmd = g_strdup_printf ("-var-create - * \"%s\"", esc);
     g_free (esc);
-    send_command (s, cmd, on_var_create_reply, ctx);
+    send_command (s, cmd, on_var_create_reply, ctx, free_var_create_ctx);
     g_free (cmd);
 }
 
@@ -420,6 +450,14 @@ typedef struct {
     MooGdbVarChildrenCb cb;
     gpointer user_data;
 } VarChildrenCtx;
+
+static void
+free_var_children_ctx (gpointer p)
+{
+    VarChildrenCtx *c = (VarChildrenCtx *) p;
+    g_free (c->parent);
+    g_free (c);
+}
 
 static void
 on_var_children_reply (MooGdbSession *s, MooGdbMiRecord *r, gpointer user_data)
@@ -485,7 +523,7 @@ moo_gdb_session_var_children (MooGdbSession *s, const char *varobj_name,
      * the user can drill into nested aggregates with one click each. */
     char *cmd = g_strdup_printf (
         "-var-list-children --simple-values %s", varobj_name);
-    send_command (s, cmd, on_var_children_reply, ctx);
+    send_command (s, cmd, on_var_children_reply, ctx, free_var_children_ctx);
     g_free (cmd);
 }
 
@@ -731,9 +769,11 @@ moo_gdb_session_send_raw (MooGdbSession *s, const char *cmd)
 
 /* ── Sending commands ─────────────────────────────────────────────── */
 
+
 static void
 send_command (MooGdbSession *s, const char *cmd,
-              ResponseCB cb, gpointer user_data)
+              ResponseCB cb, gpointer user_data,
+              GDestroyNotify destroy)
 {
     if (!s->gdb_in) return;
     /* gdb_in stays non-NULL after gdb dies (it is owned by the GSubprocess),
@@ -754,6 +794,7 @@ send_command (MooGdbSession *s, const char *cmd,
         PendingEntry *pe = g_new (PendingEntry, 1);
         pe->cb        = cb;
         pe->user_data = user_data;
+        pe->destroy   = destroy;
         g_hash_table_insert (s->pending, GINT_TO_POINTER (token), pe);
     }
 }
@@ -844,9 +885,12 @@ dispatch_record (MooGdbSession *s, MooGdbMiRecord *r)
             if (pe) {
                 ResponseCB cb = pe->cb;
                 gpointer ud   = pe->user_data;
-                /* Remove before invoking so the callback can safely
-                 * issue another command. */
-                g_hash_table_remove (s->pending, GINT_TO_POINTER (tok));
+                /* Steal (not remove) before invoking, so the callback can
+                 * safely issue another command and so the entry's destructor
+                 * does not free user_data out from under it -- on this path
+                 * the callback takes ownership. */
+                g_hash_table_steal (s->pending, GINT_TO_POINTER (tok));
+                g_free (pe);
                 if (cb) cb (s, r, ud);
             }
         }

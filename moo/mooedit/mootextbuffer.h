@@ -110,6 +110,8 @@ GSList     *moo_text_buffer_get_line_marks_in_range     (MooTextBuffer      *buf
 GSList     *moo_text_buffer_get_line_marks_at_line      (MooTextBuffer      *buffer,
                                                          int                 line);
 
+/* Returns the new fold, owned by the buffer's fold tree (transfer none),
+   or NULL if the range overlaps an existing fold. */
 MooFold    *moo_text_buffer_add_fold                    (MooTextBuffer      *buffer,
                                                          int                 first_line,
                                                          int                 end_line);

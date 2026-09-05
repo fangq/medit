@@ -2080,7 +2080,11 @@ moo_text_buffer_add_fold (MooTextBuffer *buffer,
     if (fold == NULL)
         return NULL;
 
-    g_object_ref (fold);
+    /* Transfer none: the fold tree owns the fold.  This used to hand out an
+       extra reference that no caller ever released, so every fold leaked --
+       along with both of its MooLineMarks -- when the document was closed
+       via _moo_fold_tree_free.  (_moo_fold_tree_clear happened to compensate
+       with an extra unref of its own; that compensation is now gone too.) */
     g_signal_emit (buffer, signals[FOLD_ADDED], 0, fold);
 
     return fold;

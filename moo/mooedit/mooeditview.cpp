@@ -442,7 +442,14 @@ _moo_edit_view_do_popup (MooEditView    *view,
         gtk_menu_shell_select_first (GTK_MENU_SHELL (menu), FALSE);
     }
 
-    g_object_unref (menu);
+    /* A popped-down GtkMenu is kept alive by its own toplevel window, so
+       ref_sink + unref leaked the whole menu -- and everything hanging off
+       it -- on every right-click.  Parking it on the view destroys the
+       previous menu when the next one is built, and the last one when the
+       view goes away.  This matters most for the spell-check items, whose
+       GtkTextMarks are only released when their menu item is destroyed. */
+    g_object_set_data_full (G_OBJECT (view), "moo-edit-view-popup-menu",
+                            menu, (GDestroyNotify) gtk_widget_destroy);
 }
 
 static gboolean

@@ -410,6 +410,10 @@ moo_html_data_free (MooHtmlData *data)
         g_hash_table_destroy (data->anchors);
         g_hash_table_destroy (data->root_tags);
         g_slist_free (data->href_tags);
+        /* moo_html_clear() frees this, but a MooHtml destroyed without a
+           preceding clear (the usual case for the preview pane) did not. */
+        g_slist_free (data->rulers);
+        data->rulers = nullptr;
 
         g_free (data->title);
         g_free (data->hover_link);

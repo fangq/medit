@@ -2195,6 +2195,10 @@ moo_text_view_finalize (GObject *object)
         g_free (view->priv->colors[i]);
 
     g_free (view->priv->char_inserted);
+    /* box_sel_clear() deliberately keeps this across selections, so nothing
+       else ever frees it. */
+    g_free (view->priv->box_sel.copied_text);
+    view->priv->box_sel.copied_text = NULL;
 
     G_OBJECT_CLASS (moo_text_view_parent_class)->finalize (object);
 }
