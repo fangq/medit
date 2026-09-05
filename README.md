@@ -23,9 +23,13 @@ The 1.8.x series represents a major modernization of medit:
 9. **Code folding** — collapse/expand blocks for curly-bracket languages (C/C++/Java/JS), `end`-keyword languages (Ruby/Pascal/Matlab/Octave), and indentation-based languages (Python)
 10. **Indentation shortcuts** — `Ctrl+9` to indent / `Ctrl+0` to unindent selected text by one space
 11. **Breadcrumb folder navigation** — clickable path bar in the file selector for fast directory traversal
-12. **CMake build support** — build with either Autotools or CMake
+12. **CMake build support** — CMake is now the supported build system
 13. **Customizable color themes** — extended theme and terminal color scheme support
-14. **Numerous bug fixes** and performance improvements
+14. **Spell checking** — inline misspelling underlines with suggestions (gspell)
+15. **Markdown and wiki preview** — live rendered preview pane
+16. **Integrated GDB debugger** — breakpoints, stepping, call stack, locals,
+    watches, hover-to-inspect, and `launch.json` support
+17. **Numerous bug fixes** and performance improvements
 
 
 ## Features
@@ -117,55 +121,63 @@ medit supports folding code blocks directly in the editor margin:
 
 ### Dependencies
 
+Required: CMake >= 3.16, pkg-config, a C11/C++14 compiler, GTK+ >= 3.22,
+GLib >= 2.56, libxml2 >= 2.9, intltool and python3 (build-time only).
+
+Optional, auto-detected: VTE >= 0.52 (terminal), gspell >= 1.2 plus hunspell
+and a dictionary (spell check), md4c/md4c-html >= 0.4 (Markdown preview),
+python3-dev with pygobject >= 3.30 (Python plugins), and gdb at run time for
+the debugger plugin.
+
+GtkSourceView, Lua, xdgmime and EggSMClient are vendored in the source tree,
+so no system packages of those are needed.
+
 On Debian/Ubuntu:
 
 ```bash
-sudo apt install build-essential autoconf automake libtool pkg-config \
-    cmake libgtk-3-dev libxml2-dev libglib2.0-dev libvte-2.91-dev \
-    intltool python3-dev
+sudo apt install build-essential cmake pkg-config intltool \
+    libgtk-3-dev libxml2-dev libglib2.0-dev libvte-2.91-dev \
+    libgspell-1-dev libhunspell-dev hunspell-en-us \
+    libmd4c-dev libmd4c-html0-dev python3-dev gdb
 ```
 
 On Fedora/RHEL:
 
 ```bash
-sudo dnf install gcc gcc-c++ autoconf automake libtool pkgconfig \
-    cmake gtk3-devel libxml2-devel glib2-devel vte291-devel intltool \
-    python3-devel
+sudo dnf install gcc gcc-c++ cmake pkgconfig intltool \
+    gtk3-devel libxml2-devel glib2-devel vte291-devel \
+    gspell-devel hunspell-devel hunspell-en-US \
+    md4c-devel python3-devel gdb
 ```
 
-### Build with CMake (Recommended)
+### Build
 
 ```bash
-mkdir build && cd build
-cmake ..
-make
-sudo make install
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build -j"$(nproc)"
+sudo cmake --install build
 ```
 
-Common CMake options:
+Run the test suite with `ctest --test-dir build --output-on-failure`
+(prefix with `xvfb-run -a` on a headless machine).
 
-```bash
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DWITH_PYTHON=ON
-```
-
-### Build with Autotools
-
-```bash
-./configure --prefix=/usr/local
-make
-sudo make install
-```
-
-### Configure Options (Autotools)
+Common options:
 
 | Option | Description |
 |--------|-------------|
-| `--with-python` | Enable/disable Python plugin support (default: yes) |
-| `--enable-debug` | Enable debug build |
-| `--enable-shared` | Build shared libraries |
-| `--disable-nls` | Disable internationalization |
+| `-DCMAKE_INSTALL_PREFIX=/usr` | Install prefix (default `/usr/local`) |
+| `-DCMAKE_BUILD_TYPE=...` | `Debug`, `Release`, `RelWithDebInfo` (default), `MinSizeRel` |
+| `-DMOO_WITH_PYTHON=yes\|no` | Python plugin support (default: auto-detect) |
+| `-DMOO_STRICT_MODE=ON` | All warnings plus `-Werror` |
+| `-DMOO_SANITIZE=address,undefined` | Build with sanitizers |
+| `-DMOO_ENABLE_COVERAGE=ON` | Code-coverage instrumentation |
+| `-DMOO_BUILD_MODULE=ON` | Also build the `_moo` Python module |
+
+### Legacy autotools build
+
+An autotools build still exists but is **unsupported and incomplete**: it has
+no detection for gspell, md4c, the wiki preview or gdb, so it cannot build
+spell checking, the page preview or the debugger. Use CMake.
 
 ## Keyboard Shortcuts
 

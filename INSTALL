@@ -1,28 +1,72 @@
-medit uses autotools for the build. Quick build with default options:
+Building medit
+==============
 
-tar xjf medit-x.x.x.tar.bz2
-cd medit-x.x.x
-./configure
-make
-make install
+medit is built with CMake.  A quick build with default options:
 
-This will configure, build, and install medit to /usr/local.
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    cmake --build build -j"$(nproc)"
+    sudo cmake --install build
 
-medit requires development packages of the following: gtk2, libxml2, python2, pygtk2.
-For example, on Debian you may need to install libgtk-3-dev, libxml2-dev, python2.7-dev, python-gtk2-dev.
+By default this installs to /usr/local; pass
+-DCMAKE_INSTALL_PREFIX=/usr to install into the system prefix.
 
-If you checked out a copy of mercurial repository, then do the following to build:
+Running the test suite:
 
-./autogen.sh
-./configure --enable-dev-mode
-make
-make install
+    ctest --test-dir build --output-on-failure
 
-Building medit from Mercurial requires the following, in addition to the dependencies
-listed above: automake, autoconf, libtool, intltool, docbook, xsltproc, txt2tags.
-Other tools may be required and configure may not check for them, please report those
-to the author.
+The suite needs a display; under a headless system run it as
+`xvfb-run -a ctest --test-dir build --output-on-failure`.
 
-To build a python module which could be used in other programs, use
---enable-moo-module --enable-shared --disable-static configure flags in addition
-to above.
+
+Dependencies
+------------
+
+Required:
+
+    cmake >= 3.16, pkg-config, a C11 / C++14 compiler
+    gtk+-3.0    >= 3.22
+    glib-2.0    >= 2.56    (with gthread-2.0 and gmodule-2.0)
+    libxml-2.0  >= 2.9
+    intltool               (still required for translation merging)
+    python3                (build-time only, for code generation)
+
+Optional -- each is auto-detected and silently skipped when absent:
+
+    vte-2.91    >= 0.52    integrated terminal
+    gspell-1    >= 1.2     spell checking (plus hunspell and a dictionary)
+    md4c, md4c-html >= 0.4 Markdown preview
+    python3-dev, pygobject-3.0 >= 3.30
+                           Python plugin support (-DMOO_WITH_PYTHON=yes)
+    gdb                    the debugger plugin (a run-time dependency only;
+                           the plugin builds without it)
+
+On Debian and Ubuntu:
+
+    sudo apt-get install build-essential cmake pkg-config intltool \
+        libgtk-3-dev libxml2-dev libglib2.0-dev libvte-2.91-dev \
+        libgspell-1-dev libhunspell-dev hunspell-en-us \
+        libmd4c-dev libmd4c-html0-dev gdb
+
+Note that GtkSourceView, Lua, xdgmime and EggSMClient are vendored in the
+source tree; no system packages of those are needed or used.
+
+
+Build options
+-------------
+
+    -DCMAKE_BUILD_TYPE=...      Debug, Release, RelWithDebInfo (default),
+                                MinSizeRel
+    -DMOO_WITH_PYTHON=yes|no    Python plugin support (default: auto)
+    -DMOO_STRICT_MODE=ON        all warnings plus -Werror
+    -DMOO_SANITIZE=address,undefined
+                                build with the given sanitizers
+    -DMOO_ENABLE_COVERAGE=ON    code-coverage instrumentation
+    -DMOO_BUILD_MODULE=ON       also build the _moo Python module
+
+
+Legacy autotools build
+----------------------
+
+An autotools build still exists but is unsupported and incomplete: it has no
+detection for gspell, md4c, the wiki preview or gdb, so it cannot build
+spell-checking, the page preview or the debugger.  Use CMake.

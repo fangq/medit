@@ -1,3 +1,51 @@
+medit 1.8.0
+===========
+
+Released <unreleased>
+
+The 1.8.x series is a major modernisation of medit, forked from Yevgen
+Muntyan's original at github.com/fangq/medit.
+
+Toolkit and runtime
+  * Ported from GTK2 to GTK3 (requires GTK+ >= 3.22, GLib >= 2.56).
+  * Ported the plugin layer from Python 2 to Python 3 (pygobject >= 3.30).
+  * CMake is now the supported build system; the autotools build is legacy
+    and cannot build the newer optional features.
+
+New features
+  * Integrated terminal, rewritten in C++ against libvte, with split panes.
+  * Integrated GDB debugger: breakpoints, stepping, call stack, locals,
+    watches, hover-to-inspect and .medit/launch.json or .vscode/launch.json
+    launch configurations.
+  * Live Markdown and wiki preview pane (md4c).
+  * Spell checking with inline underlines and suggestions (gspell).
+  * Code folding for brace, end-keyword and indentation based languages.
+  * Rectangular (column) selection with copy and paste.
+  * Fast loading of files with very long lines, with progressive reveal.
+  * Ctrl+scroll font zoom; Ctrl+] bracket jump; Ctrl+9 / Ctrl+0 indent.
+  * Breadcrumb folder navigation in the file selector.
+
+Notable fixes in this release
+  * The built-in terminal was compiled but never registered in CMake builds,
+    so it was unreachable in every packaged build.
+  * The current-line highlight, right margin and mark backgrounds were drawn
+    in the wrong coordinate space and then painted over by GtkTextView, so
+    they never appeared.  Now drawn from a GtkTextView draw layer.
+  * Several use-after-free crashes: the GDB session's async read loop, the
+    debugger's tooltip handlers and build runner, the terminal's cached
+    widget pointer, and the page preview's buffer pointer.
+  * "GLib-CRITICAL: Source ID N was not found" from the editor's
+    drag-scroll timeout.
+  * Unbounded fork loop when the configured shell could not be spawned.
+  * Menus, folds, GDB callback contexts and spell-check marks were leaked;
+    right-clicking a misspelled word permanently grew the document's mark
+    tree.
+  * Theme changes did not propagate (style-set never fires under GTK3), the
+    file browser's mouse wheel did nothing, the completion popup never took
+    a pointer grab, and pane drag-and-drop docked to the wrong edge.
+  * SIGINT/SIGHUP handling had never been compiled in; SIGPIPE is now
+    ignored so a dead subprocess cannot kill the editor.
+
 2017-11-12  Yevgen Muntyan  <emuntyan@users.sourceforge.net>
 
     * === Released 1.2.92-devel ===

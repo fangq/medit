@@ -1,40 +1,45 @@
 General Information
 ===================
 
-medit is a text editor.
+medit is a lightweight programmer's text editor.
 
-medit is free software, released under GNU GPL license. See the LICENSE
-file in this distribution for details.
+medit is free software, released under the GNU Lesser General Public
+License version 2.1 or later.  See the COPYING file in this distribution
+for the full text.
 
-The web site is:
-    http://medit.bitbucket.org/
-releases are located at:
-    http://sourceforge.net/project/showfiles.php?group_id=167563
+See README.md for the feature list, screenshots and build instructions,
+and INSTALL for dependencies and build options.
+
+The project page is:
+    https://github.com/fangq/medit
 
 
 Installation
 ============
 
-See INSTALL file in this distribution.
+See the INSTALL file in this distribution.
 
 
 Bug reports and contact
 =======================
 
-Report bugs and file feature requests in the medit bug tracker at
-http://sourceforge.net/tracker/?group_id=167563&atid=843451 . You can
-also send an email to emuntyan@users.sourceforge.net if you don't feel
-like using the bug tracker, or have any questions/comments.
+Report bugs and file feature requests at
+    https://github.com/fangq/medit/issues
 
 
 Sources
 =======
 
-medit sources are tracked using mercurial. You can browse medit source
-repository online at http://bitbucket.org/medit/medit/. To check out a
-copy of medit repository, install mercurial, and do
-    hg clone http://bitbucket.org/medit/medit/
-This will create a new directory named 'medit' with medit sources inside.
-To update them later on, do
-    hg pull; hg update
-in this directory.
+medit sources are tracked with git:
+
+    git clone https://github.com/fangq/medit.git
+
+
+History
+=======
+
+medit was written by Yevgen Muntyan between 2004 and 2010, and was
+developed at mooedit.sourceforge.net and medit.bitbucket.org.  This
+repository is a fork that continues it; the original project is no
+longer maintained, and its old bug tracker and contact addresses should
+not be used for issues with this version.
