@@ -936,13 +936,15 @@ moo_notebook_size_allocate (GtkWidget     *widget,
             arrows_req.width = MAX (arrows_req.width, 2*height);
         }
 
-        nb->priv->tabs_height = CLAMP (height, 0, allocation->height - 2*border_width);
+        nb->priv->tabs_height =
+                CLAMP (height, 0, MAX (0, allocation->height - 2*border_width));
 
         if (nb->priv->action_widgets[LEFT] &&
             gtk_widget_get_visible (GTK_WIDGET(nb->priv->action_widgets[LEFT])))
         {
             nb->priv->action_widgets_size[LEFT] =
-                    CLAMP (left_req.width, 0, allocation->width - 2*border_width);
+                    CLAMP (left_req.width, 0,
+                           MAX (0, allocation->width - 2*border_width));
         }
 
         if (nb->priv->action_widgets[RIGHT] &&
@@ -950,19 +952,21 @@ moo_notebook_size_allocate (GtkWidget     *widget,
         {
             nb->priv->action_widgets_size[RIGHT] =
                     CLAMP (right_req.width, 0,
-                           allocation->width - nb->priv->action_widgets_size[LEFT] - 2*border_width);
+                           MAX (0, allocation->width - nb->priv->action_widgets_size[LEFT]
+                                   - 2*border_width));
         }
 
         if (nb->priv->arrows_visible)
         {
             nb->priv->arrows_size =
                     CLAMP (arrows_req.width, 0,
-                           allocation->width - nb->priv->action_widgets_size[LEFT]
-                                   - nb->priv->action_widgets_size[RIGHT] - 2*border_width);
+                           MAX (0, allocation->width - nb->priv->action_widgets_size[LEFT]
+                                   - nb->priv->action_widgets_size[RIGHT] - 2*border_width));
         }
     }
 
-    nb->priv->child_height = allocation->height - nb->priv->tabs_height - 2*border_width;
+    nb->priv->child_height =
+            MAX (0, allocation->height - nb->priv->tabs_height - 2*border_width);
 
     tabs_allocation.x = 0;
     tabs_allocation.y = 0;
@@ -1120,7 +1124,7 @@ moo_notebook_realize (GtkWidget *widget)
     attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL;
 
     nb->priv->tab_window = gdk_window_new (gtk_widget_get_window (widget), &attributes, attributes_mask);
-    gdk_window_set_user_data (nb->priv->tab_window, widget);
+    gtk_widget_register_window (widget, nb->priv->tab_window);
 
 #if 0
     update_notebook_style (widget);
@@ -1151,7 +1155,7 @@ moo_notebook_unrealize (GtkWidget *widget)
 {
     MooNotebook *nb = MOO_NOTEBOOK (widget);
 
-    gdk_window_set_user_data (nb->priv->tab_window, NULL);
+    gtk_widget_unregister_window (widget, nb->priv->tab_window);
     gdk_window_destroy (nb->priv->tab_window);
     nb->priv->tab_window = NULL;
 

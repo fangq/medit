@@ -346,7 +346,7 @@ moo_big_paned_finalize (GObject *object)
 
     if (paned->priv->drop_outline)
     {
-        gdk_window_set_user_data (paned->priv->drop_outline, NULL);
+        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
         gdk_window_destroy (paned->priv->drop_outline);
         paned->priv->drop_outline = NULL;
     }
@@ -1274,7 +1274,7 @@ handle_drag_motion (MooPaned       *child,
 
     if (paned->priv->drop_outline)
     {
-        gdk_window_set_user_data (paned->priv->drop_outline, NULL);
+        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
         gdk_window_destroy (paned->priv->drop_outline);
         paned->priv->drop_outline = NULL;
     }
@@ -1298,7 +1298,7 @@ cleanup_drag (MooBigPaned *paned)
 
     if (paned->priv->drop_outline)
     {
-        gdk_window_set_user_data (paned->priv->drop_outline, NULL);
+        gtk_widget_unregister_window (GTK_WIDGET (paned), paned->priv->drop_outline);
         gdk_window_destroy (paned->priv->drop_outline);
         paned->priv->drop_outline = NULL;
     }
@@ -1581,7 +1581,7 @@ create_drop_outline (MooBigPaned *paned)
 
     paned->priv->drop_outline = gdk_window_new (gtk_widget_get_window (paned->priv->outer),
                                                 &attributes, attributes_mask);
-    gdk_window_set_user_data (paned->priv->drop_outline, paned);
+    gtk_widget_register_window (GTK_WIDGET (paned), paned->priv->drop_outline);
 
     button_rect = paned->priv->drop_button_rect;
     button_rect.x -= paned->priv->drop_rect.x;

@@ -100,7 +100,7 @@ moo_link_label_realize (GtkWidget *widget)
     attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_NOREDIR;
 
     label->priv->window = gdk_window_new (gtk_widget_get_window (widget), &attributes, attributes_mask);
-    gdk_window_set_user_data (label->priv->window, widget);
+    gtk_widget_register_window (widget, label->priv->window);
 
     set_cursor (widget, label->priv->url && label->priv->text);
 }
@@ -111,7 +111,7 @@ moo_link_label_unrealize (GtkWidget *widget)
 {
     MooLinkLabel *label = MOO_LINK_LABEL (widget);
 
-    gdk_window_set_user_data (label->priv->window, NULL);
+    gtk_widget_unregister_window (widget, label->priv->window);
     gdk_window_destroy (label->priv->window);
     label->priv->window = NULL;
 

@@ -825,8 +825,24 @@ realize_pane (MooPaned *paned)
     realize_handle (paned);
 
     if (paned->priv->current_pane)
+    {
         _moo_pane_set_parent (paned->priv->current_pane, paned,
                               paned->priv->pane_window);
+
+        /* unrealize cleared these; restore them, or the pane stays invisible
+           after any unrealize/realize cycle (detach/attach, hide/show,
+           reparent) and cannot be reopened -- moo_paned_open_pane returns
+           early because current_pane already names it. */
+        paned->priv->handle_visible = TRUE;
+        paned->priv->pane_widget_visible = TRUE;
+        gtk_widget_style_get (widget, "handle_size",
+                              &paned->priv->handle_size, NULL);
+        if (paned->priv->handle_size <= 0)
+            paned->priv->handle_size = 5;
+        if (paned->priv->pane_widget_size <= 0)
+            paned->priv->pane_widget_size =
+                paned->priv->position > 0 ? paned->priv->position : 200;
+    }
 }
 
 
@@ -1077,6 +1093,12 @@ get_pane_widget_allocation (MooPaned        *paned,
             allocation->height = paned->priv->pane_widget_size;
             break;
     }
+
+    /* A paned narrower than its own button strip would otherwise pass a
+       negative size to gtk_widget_size_allocate ("attempt to allocate
+       widget with width -N"). */
+    allocation->width  = MAX (0, allocation->width);
+    allocation->height = MAX (0, allocation->height);
 }
 
 
@@ -1182,6 +1204,12 @@ get_bin_child_allocation (MooPaned        *paned,
                 break;
         }
     }
+
+    /* A paned narrower than its own button strip would otherwise pass a
+       negative size to gtk_widget_size_allocate ("attempt to allocate
+       widget with width -N"). */
+    allocation->width  = MAX (0, allocation->width);
+    allocation->height = MAX (0, allocation->height);
 }
 
 
@@ -1411,14 +1439,17 @@ moo_paned_map (GtkWidget *widget)
 {
     MooPaned *paned = MOO_PANED (widget);
 
-    gdk_window_show (paned->priv->bin_window);
+    if (paned->priv->bin_window)
+        gdk_window_show (paned->priv->bin_window);
 
     GTK_WIDGET_CLASS(moo_paned_parent_class)->map (widget);
 
     if (paned->priv->handle_visible)
     {
-        gdk_window_show (paned->priv->pane_window);
-        gdk_window_show (paned->priv->handle_window);
+        if (paned->priv->pane_window)
+            gdk_window_show (paned->priv->pane_window);
+        if (paned->priv->handle_window)
+            gdk_window_show (paned->priv->handle_window);
     }
 }
 
@@ -2786,11 +2817,11 @@ moo_paned_open_pane_real (MooPaned *paned,
         gtk_widget_hide (_moo_pane_get_frame (old_pane));
     }
 
-    if (gtk_widget_get_mapped (GTK_WIDGET (paned)))
-    {
-        gdk_window_show (paned->priv->pane_window);
-        gdk_window_show (paned->priv->handle_window);
-    }
+    /* The windows are shown further down, guarded by a realized check and
+       NULL checks.  Doing it here as well passed NULL to gdk_window_show
+       whenever the paned was mapped but not realized, or after an unrealize
+       had cleared the pointers -- "Gdk-CRITICAL: gdk_window_show: assertion
+       'GDK_IS_WINDOW (window)' failed". */
 
     gtk_widget_set_parent_window (_moo_pane_get_frame (pane), paned->priv->pane_window);
 
