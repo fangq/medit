@@ -135,7 +135,6 @@ static void     moo_icon_view_state_changed (GtkWidget      *widget,
 static void     moo_icon_view_style_updated (GtkWidget     *widget);
 static void     moo_icon_view_map           (GtkWidget      *widget);
 static void     moo_icon_view_realize       (GtkWidget      *widget);
-static void     moo_icon_view_unrealize     (GtkWidget      *widget);
 static void     moo_icon_view_get_preferred_width  (GtkWidget *widget,
                                                      gint      *minimum,
                                                      gint      *natural);
@@ -320,7 +319,6 @@ _moo_icon_view_class_init (MooIconViewClass *klass)
     widget_class->style_updated = moo_icon_view_style_updated;
     widget_class->map = moo_icon_view_map;
     widget_class->realize = moo_icon_view_realize;
-    widget_class->unrealize = moo_icon_view_unrealize;
     widget_class->get_preferred_width  = moo_icon_view_get_preferred_width;
     widget_class->get_preferred_height = moo_icon_view_get_preferred_height;
     widget_class->size_allocate = moo_icon_view_size_allocate;
@@ -1040,24 +1038,21 @@ moo_icon_view_realize (GtkWidget *widget)
 }
 
 
-static void
-moo_icon_view_unrealize (GtkWidget *widget)
-{
-    GdkWindow *window = gtk_widget_get_window (widget);
-
-    if (window)
-    {
-        gtk_widget_unregister_window (widget, window);
-        gdk_window_destroy (window);
-        gtk_widget_set_window (widget, NULL);
-    }
-
-    /* Chain up rather than open-coding the teardown: GtkWidget's default
-       unrealize also runs gtk_selection_remove_all(), and this widget is both
-       a drag source and a drag destination, so its DnD registrations
-       otherwise leaked across every realize cycle. */
-    GTK_WIDGET_CLASS (_moo_icon_view_parent_class)->unrealize (widget);
-}
+/* No ::unrealize override.
+ *
+ * MooIconView is a has-window widget (gtk_widget_set_has_window in _init), and
+ * GtkWidget's own unrealize already unregisters and destroys that window, and
+ * additionally runs gtk_selection_remove_all() -- which the old open-coded
+ * teardown skipped, leaking the DnD registrations of this drag source and
+ * drag destination across every realize cycle.
+ *
+ * Doing the teardown here *as well as* chaining up was worse: it left
+ * priv->window NULL by the time GtkWidget ran, so opening the File Selector
+ * pane (which reparents the frame, and so unrealizes its children) produced
+ *   gtk_widget_unregister_window: assertion 'GDK_IS_WINDOW (window)' failed
+ *   _gdk_window_destroy_hierarchy: assertion 'GDK_IS_WINDOW (window)' failed
+ *   g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+ */
 
 
 static void
