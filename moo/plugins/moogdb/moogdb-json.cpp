@@ -39,8 +39,13 @@ typedef struct {
     const char *p;        /* current cursor */
     int         line;
     int         col;
+    int         depth;    /* nesting depth, to bound recursion */
     GError    **error;
 } ParseState;
+
+/* launch.json files are shallow; the limit only exists so a pathological or
+ * truncated file ("[[[[[[...") cannot recurse the stack to death. */
+#define JSON_MAX_DEPTH 100
 
 static void
 set_error (ParseState *ps, const char *fmt, ...) G_GNUC_PRINTF (2, 3);
@@ -156,6 +161,42 @@ parse_string (ParseState *ps)
                     advance (ps);
                 }
                 gunichar uc = (gunichar) strtoul (hex, NULL, 16);
+
+                /* A high surrogate must be followed by "\uDC00-\uDFFF";
+                   together they encode one character above the BMP.  Emitting
+                   either half on its own yields CESU-8, which GTK rejects
+                   later on with "Invalid UTF-8". */
+                if (uc >= 0xD800 && uc <= 0xDBFF) {
+                    if (ps->p[0] == '\\' && ps->p[1] == 'u') {
+                        char lo_hex[5] = {0};
+                        const char *save = ps->p;
+                        advance (ps); advance (ps);
+                        int i;
+                        for (i = 0; i < 4 && g_ascii_isxdigit (*ps->p); i++) {
+                            lo_hex[i] = *ps->p;
+                            advance (ps);
+                        }
+                        gunichar lo = (i == 4)
+                            ? (gunichar) strtoul (lo_hex, NULL, 16) : 0;
+                        if (lo >= 0xDC00 && lo <= 0xDFFF) {
+                            uc = 0x10000 + ((uc - 0xD800) << 10)
+                                         + (lo - 0xDC00);
+                        } else {
+                            ps->p = save;   /* not a pair; report below */
+                            uc = 0;
+                        }
+                    } else {
+                        uc = 0;
+                    }
+                }
+
+                if (uc == 0 || (uc >= 0xDC00 && uc <= 0xDFFF) ||
+                    !g_unichar_validate (uc)) {
+                    set_error (ps, "invalid \\u escape");
+                    g_string_free (out, TRUE);
+                    return NULL;
+                }
+
                 char utf8[8] = {0};
                 int n = g_unichar_to_utf8 (uc, utf8);
                 g_string_append_len (out, utf8, n);
@@ -293,8 +334,19 @@ parse_value (ParseState *ps)
         v->v.s = s;
         return v;
     }
-    if (c == '{') return parse_object (ps);
-    if (c == '[') return parse_array (ps);
+    if (c == '{' || c == '[') {
+        /* Bounded here rather than in parse_object/parse_array, each of which
+           has several return paths; this is the only way into them. */
+        if (ps->depth >= JSON_MAX_DEPTH) {
+            set_error (ps, "maximum nesting depth (%d) exceeded",
+                       JSON_MAX_DEPTH);
+            return NULL;
+        }
+        ps->depth++;
+        MooJsonValue *v = (c == '{') ? parse_object (ps) : parse_array (ps);
+        ps->depth--;
+        return v;
+    }
     if (c == '-' || g_ascii_isdigit (c)) return parse_number (ps);
     if (!strncmp (ps->p, "true",  4))
         return parse_literal (ps, "true",  MOO_JSON_BOOL, TRUE);
@@ -316,6 +368,7 @@ moo_json_parse (const char *text, GError **error)
     ps.p     = text;
     ps.line  = 1;
     ps.col   = 1;
+    ps.depth = 0;
     ps.error = error;
     MooJsonValue *v = parse_value (&ps);
     if (!v) return NULL;

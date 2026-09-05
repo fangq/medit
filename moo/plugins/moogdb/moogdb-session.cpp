@@ -266,7 +266,9 @@ moo_gdb_session_eval_watch (MooGdbSession *s, guint slot, const char *expr)
     /* Stash the slot in the command callback's user_data so the
      * reply handler can write the result back into the right
      * slot.  GINT_TO_POINTER is fine for slot indices (small). */
-    char *cmd = g_strdup_printf ("-data-evaluate-expression \"%s\"", expr);
+    char *esc = g_strescape (expr, "");
+    char *cmd = g_strdup_printf ("-data-evaluate-expression \"%s\"", esc);
+    g_free (esc);
     /* The pending-table value is the callback's user_data, not the
      * callback's own state — but our send_command's PendingEntry
      * has user_data wired in.  We pass slot via the user_data
@@ -327,7 +329,9 @@ moo_gdb_session_eval_async (MooGdbSession *s, const char *expr,
     ctx->cb        = cb;
     ctx->user_data = user_data;
     ctx->expr      = g_strdup (expr);
-    char *cmd = g_strdup_printf ("-data-evaluate-expression \"%s\"", expr);
+    char *esc = g_strescape (expr, "");
+    char *cmd = g_strdup_printf ("-data-evaluate-expression \"%s\"", esc);
+    g_free (esc);
     send_command (s, cmd, on_eval_async_reply, ctx);
     g_free (cmd);
 }
@@ -353,7 +357,8 @@ on_var_create_reply (MooGdbSession *s, MooGdbMiRecord *r, gpointer user_data)
         const char *name = name_v ? moo_gdb_mi_value_string (name_v) : NULL;
         const char *type = type_v ? moo_gdb_mi_value_string (type_v) : NULL;
         const char *val  = val_v  ? moo_gdb_mi_value_string (val_v)  : NULL;
-        int nc = nc_v ? atoi (moo_gdb_mi_value_string (nc_v)) : 0;
+        const char *nc_s = nc_v ? moo_gdb_mi_value_string (nc_v) : NULL;
+        int nc = nc_s ? atoi (nc_s) : 0;
         if (name)
             g_ptr_array_add (s->varobjs, g_strdup (name));
         if (ctx->cb)
@@ -388,12 +393,12 @@ moo_gdb_session_var_create (MooGdbSession *s, const char *expr,
     ctx->expr = g_strdup (expr);
     ctx->cb        = cb;
     ctx->user_data = user_data;
-    /* `-var-create - * EXPR` — `-` lets gdb pick the name, `*` binds
-     * to the current frame.  Wrapping EXPR in quotes is safe because
-     * the locals/Watches pane only feeds us names sourced from gdb
-     * itself; the parser tolerates simple identifiers with no
-     * additional escaping. */
-    char *cmd = g_strdup_printf ("-var-create - * \"%s\"", expr);
+    /* `-var-create - * EXPR` — `-` lets gdb pick the name, `*` binds to the
+     * current frame.  EXPR reaches here from the Watches pane as well as from
+     * gdb itself, so it is escaped like any other quoted MI argument. */
+    char *esc = g_strescape (expr, "");
+    char *cmd = g_strdup_printf ("-var-create - * \"%s\"", esc);
+    g_free (esc);
     send_command (s, cmd, on_var_create_reply, ctx);
     g_free (cmd);
 }
@@ -441,8 +446,10 @@ on_var_children_reply (MooGdbSession *s, MooGdbMiRecord *r, gpointer user_data)
                 v = moo_gdb_mi_value_tuple_get (child, "value");
                 if (v) c->value = g_strdup (moo_gdb_mi_value_string (v));
                 v = moo_gdb_mi_value_tuple_get (child, "numchild");
-                if (v) c->numchild =
-                    atoi (moo_gdb_mi_value_string (v));
+                if (v) {
+                    const char *nc_s = moo_gdb_mi_value_string (v);
+                    c->numchild = nc_s ? atoi (nc_s) : 0;
+                }
                 /* Track the gdb-side varobj so we can delete it on
                  * the next *running. */
                 if (c->name)

@@ -102,7 +102,12 @@ struct _MooGdbMiRecord {
 typedef struct {
     const char *p;     /* current cursor */
     const char *end;   /* one past last char */
+    int         depth; /* nesting depth, to bound recursion */
 } ParseState;
+
+/* gdb's own output never nests anywhere near this deeply; the limit exists so
+ * that malformed or hostile output cannot recurse the stack to death. */
+#define MI_MAX_DEPTH 64
 
 static MooGdbMiValue *parse_value  (ParseState *ps);
 static gboolean       parse_result (ParseState *ps, char **out_name,
@@ -206,10 +211,14 @@ parse_tuple (ParseState *ps)
             moo_gdb_mi_value_free (v);
             return NULL;
         }
-        /* Take ownership of name+child by storing in the hash table. */
-        char *name_copy = name;  /* owned by hash table now */
-        g_hash_table_insert (v->u.tuple_fields, name_copy, child);
-        g_ptr_array_add (v->tuple_order, name_copy);
+        /* Take ownership of name+child by storing in the hash table.  On a
+           duplicate key g_hash_table_insert frees the key we just passed and
+           keeps the existing one, so the order array must not record it
+           again. */
+        gboolean is_new = !g_hash_table_contains (v->u.tuple_fields, name);
+        g_hash_table_insert (v->u.tuple_fields, name, child);
+        if (is_new)
+            g_ptr_array_add (v->tuple_order, name);
         if (!eat (ps, ',')) break;
     }
     if (!eat (ps, '}')) {
@@ -274,8 +283,16 @@ parse_value (ParseState *ps)
         v->u.str = s;
         return v;
     }
-    if (peek (ps, '{')) return parse_tuple (ps);
-    if (peek (ps, '[')) return parse_list (ps);
+    if (peek (ps, '{') || peek (ps, '[')) {
+        /* Bounded here rather than inside parse_tuple/parse_list, which have
+           several return paths each; this is the only way into them. */
+        if (ps->depth >= MI_MAX_DEPTH)
+            return NULL;
+        ps->depth++;
+        MooGdbMiValue *v = peek (ps, '{') ? parse_tuple (ps) : parse_list (ps);
+        ps->depth--;
+        return v;
+    }
     return NULL;
 }
 
@@ -302,15 +319,20 @@ moo_gdb_mi_parse (const char *line)
     if (!line || !*line) return NULL;
     size_t len = strlen (line);
 
-    ParseState ps = { line, line + len };
+    ParseState ps = { line, line + len, 0 };
 
     /* Optional token: leading digits before the type marker. */
     int  token   = -1;
     const char *p = ps.p;
     if (g_ascii_isdigit (*p)) {
         token = 0;
-        while (p < ps.end && g_ascii_isdigit (*p))
-            token = token * 10 + (*p++ - '0');
+        while (p < ps.end && g_ascii_isdigit (*p)) {
+            if (token > (G_MAXINT - 9) / 10)
+                token = G_MAXINT;   /* saturate: never matches a pending id */
+            else
+                token = token * 10 + (*p - '0');
+            p++;
+        }
         ps.p = p;
     }
 
@@ -387,8 +409,11 @@ moo_gdb_mi_parse (const char *line)
                 moo_gdb_mi_record_free (r);
                 return NULL;
             }
+            gboolean is_new =
+                !g_hash_table_contains (tup->u.tuple_fields, name);
             g_hash_table_insert (tup->u.tuple_fields, name, child);
-            g_ptr_array_add (tup->tuple_order, name);
+            if (is_new)
+                g_ptr_array_add (tup->tuple_order, name);
             if (!eat (&ps, ',')) break;
         }
         r->fields = tup;

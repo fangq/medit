@@ -2643,7 +2643,6 @@ static gboolean drag_scroll                 (MooNotebook    *nb);
 static void
 tab_drag_cancel (MooNotebook *nb)
 {
-    g_print ("cancel\n");
     tab_drag_end (nb, FALSE);
 }
 
