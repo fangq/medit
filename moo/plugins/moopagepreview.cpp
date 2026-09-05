@@ -84,7 +84,7 @@ typedef struct {
     /* Live-preview state — tracked so we can disconnect on doc switch
      * and on plugin teardown without dangling-handler crashes. */
     gulong       notify_active_doc_id;  /* on the MooEditWindow */
-    GtkTextBuffer *current_buffer;      /* whichever buffer "changed" is connected to */
+    GtkTextBuffer *current_buffer;      /* whichever buffer "changed" is connected to; owned */
     gulong       buffer_changed_id;     /* handler id on current_buffer */
     guint        render_timeout_id;     /* g_timeout source for debounce */
 } PagePreviewWindowPlugin;
@@ -1852,17 +1852,28 @@ page_preview_rewire_buffer_signal (PagePreviewWindowPlugin *plugin)
     if (buffer == plugin->current_buffer)
         return;     /* nothing to do — already wired to this buffer */
 
-    if (plugin->current_buffer != NULL && plugin->buffer_changed_id != 0)
+    /* A reference is held while wired up: the previewed document can be
+       closed at any time, and disconnecting the handler afterwards would
+       touch a finalized GtkTextBuffer.  It also stops a freshly allocated
+       buffer from reusing the old address and defeating the test above. */
+    if (plugin->current_buffer != NULL)
     {
-        g_signal_handler_disconnect (plugin->current_buffer,
-                                     plugin->buffer_changed_id);
-        plugin->buffer_changed_id = 0;
+        if (plugin->buffer_changed_id != 0)
+        {
+            g_signal_handler_disconnect (plugin->current_buffer,
+                                         plugin->buffer_changed_id);
+            plugin->buffer_changed_id = 0;
+        }
+        g_object_unref (plugin->current_buffer);
     }
     plugin->current_buffer = buffer;
     if (buffer != NULL)
+    {
+        g_object_ref (buffer);
         plugin->buffer_changed_id = g_signal_connect (
             buffer, "changed",
             G_CALLBACK (page_preview_on_buffer_changed), plugin);
+    }
 }
 
 /* MooEditWindow "notify::active-doc" handler.  Re-wire to the new doc's
@@ -1987,13 +1998,17 @@ page_preview_window_plugin_destroy (PagePreviewWindowPlugin *plugin)
         g_source_remove (plugin->render_timeout_id);
         plugin->render_timeout_id = 0;
     }
-    if (plugin->current_buffer != NULL && plugin->buffer_changed_id != 0)
+    if (plugin->current_buffer != NULL)
     {
-        g_signal_handler_disconnect (plugin->current_buffer,
-                                     plugin->buffer_changed_id);
-        plugin->buffer_changed_id = 0;
+        if (plugin->buffer_changed_id != 0)
+        {
+            g_signal_handler_disconnect (plugin->current_buffer,
+                                         plugin->buffer_changed_id);
+            plugin->buffer_changed_id = 0;
+        }
+        g_object_unref (plugin->current_buffer);
+        plugin->current_buffer = NULL;
     }
-    plugin->current_buffer = NULL;
     if (plugin->notify_active_doc_id != 0)
     {
         g_signal_handler_disconnect (window, plugin->notify_active_doc_id);

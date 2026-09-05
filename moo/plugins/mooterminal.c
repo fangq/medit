@@ -235,6 +235,11 @@ shell_supports_pushd (const char *shell)
 /* Terminal widget creation                                         */
 /* ================================================================ */
 
+/* Time of the last spawn, stored per terminal, so a shell that dies
+ * immediately cannot be respawned in a tight loop. */
+#define TERMINAL_SPAWN_TIME_KEY  "moo-terminal-spawn-time"
+#define TERMINAL_MIN_SHELL_USEC  (200 * 1000)
+
 static void
 terminal_spawn (VteTerminal *term)
 {
@@ -258,13 +263,48 @@ terminal_spawn (VteTerminal *term)
 #endif
 
     g_free (shell);
+
+    {
+        gint64 *stamp = g_new (gint64, 1);
+        *stamp = g_get_monotonic_time ();
+        g_object_set_data_full (G_OBJECT (term), TERMINAL_SPAWN_TIME_KEY,
+                                stamp, g_free);
+    }
 }
 
 static void
 on_child_exited (VteTerminal *term, gint status, gpointer user_data)
 {
+    gint64 *spawned;
+    gint64 now;
+
     (void)status;
     (void)user_data;
+
+    /* The pane is being torn down: VTE emits "child-exited" when the PTY goes
+       away, and respawning here leaks an orphan shell per split. */
+    if (gtk_widget_in_destruction (GTK_WIDGET (term)))
+        return;
+
+    /* vte_terminal_spawn_async() reports spawn failure by emitting
+       "child-exited", so an unspawnable shell -- a bad "Shell" preference,
+       say -- would otherwise fork forever and wedge the UI. */
+    now = g_get_monotonic_time ();
+    spawned = (gint64 *) g_object_get_data (G_OBJECT (term),
+                                            TERMINAL_SPAWN_TIME_KEY);
+
+    if (spawned && now - *spawned < TERMINAL_MIN_SHELL_USEC)
+    {
+        char *shell = get_user_shell ();
+        char *msg = g_strdup_printf (
+            "\r\n[medit] '%s' exited immediately; not restarting it.\r\n"
+            "[medit] Check the Shell preference or $SHELL.\r\n", shell);
+        vte_terminal_feed (term, msg, -1);
+        g_free (msg);
+        g_free (shell);
+        return;
+    }
+
     vte_terminal_reset (term, TRUE, TRUE);
     terminal_spawn (term);
 }
@@ -1096,6 +1136,12 @@ terminal_window_plugin_create (TerminalWindowPlugin *plugin)
         GList *children = gtk_container_get_children (GTK_CONTAINER (hbox));
         plugin->terminal = VTE_TERMINAL (children->data);
         g_list_free (children);
+        /* Closing this split destroys the terminal while the plugin is still
+           alive, so the cached pointer has to clear itself -- otherwise
+           terminal_window_plugin_destroy() disconnects a handler on freed
+           memory. */
+        g_object_add_weak_pointer (G_OBJECT (plugin->terminal),
+                                   (gpointer *) &plugin->terminal);
     }
 
     /* Build the top-level frame container (shadow none to avoid
@@ -1125,10 +1171,12 @@ terminal_window_plugin_destroy (TerminalWindowPlugin *plugin)
 
     if (plugin->terminal) {
         g_signal_handler_disconnect (plugin->terminal, plugin->icon_title_id);
+        g_object_remove_weak_pointer (G_OBJECT (plugin->terminal),
+                                      (gpointer *) &plugin->terminal);
+        plugin->terminal = NULL;
     }
 
     moo_edit_window_remove_pane (window, TERMINAL_PLUGIN_ID);
-    plugin->terminal = NULL;
     plugin->pane = NULL;
 }
 

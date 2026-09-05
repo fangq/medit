@@ -62,18 +62,30 @@ on_state_changed (MooGdbSession *s, gpointer user_data)
     }
 }
 
+/* Cleanup lives on "destroy", not "response": the dialog is created with
+ * GTK_DIALOG_DESTROY_WITH_PARENT, and closing the editor window destroys it
+ * without ever emitting "response".  Hanging the teardown off "response"
+ * meant the gdb subprocess was never killed and outlived medit itself. */
 static void
-on_dialog_response (G_GNUC_UNUSED GtkDialog *dlg,
-                    G_GNUC_UNUSED int response, gpointer user_data)
+on_dialog_destroy (G_GNUC_UNUSED GtkWidget *dlg, gpointer user_data)
 {
     TestCtx *ctx = (TestCtx *) user_data;
     if (ctx->session) {
+        g_signal_handlers_disconnect_by_data (ctx->session, ctx);
         moo_gdb_session_quit (ctx->session);
+        moo_gdb_session_shutdown (ctx->session);
         g_object_unref (ctx->session);
         ctx->session = NULL;
     }
-    gtk_widget_destroy (ctx->dialog);
     g_free (ctx);
+}
+
+static void
+on_dialog_response (GtkDialog *dlg,
+                    G_GNUC_UNUSED int response,
+                    G_GNUC_UNUSED gpointer user_data)
+{
+    gtk_widget_destroy (GTK_WIDGET (dlg));
 }
 
 void
@@ -121,6 +133,8 @@ moo_gdb_ui_test_connection (MooEditWindow *window)
                       G_CALLBACK (on_state_changed), ctx);
     g_signal_connect (dialog, "response",
                       G_CALLBACK (on_dialog_response), ctx);
+    g_signal_connect (dialog, "destroy",
+                      G_CALLBACK (on_dialog_destroy), ctx);
 
     gtk_widget_show_all (dialog);
 
@@ -219,6 +233,11 @@ struct _MooGdbWin {
     GHashTable    *hover_cache;     /* char* -> char* */
     GHashTable    *hover_pending;   /* char* -> dummy non-NULL */
 
+    /* Views this window has hooked "query-tooltip" on.  attach_hover_to_open_docs
+     * walks the global document list, so these outlive the window unless they
+     * are disconnected explicitly in moo_gdb_win_free. */
+    GPtrArray     *hover_views;     /* MooEditView*, unowned */
+
     /* Launch-config project.  NULL when no `.medit/launch.json` or
      * `.vscode/launch.json` is found upwards from the active doc.
      * `active_config` indexes into project->configs[]; -1 if no
@@ -243,6 +262,9 @@ struct _MooGdbWin {
      * on success (NULL if the build was a manual one-shot). */
     gboolean       is_building;
     GCancellable  *build_cancel;
+    /* In-flight build, if any.  Unowned: the BuildCtx outlives this struct
+     * when the window is closed mid-build, and clears its own back-pointer. */
+    struct _BuildCtx *build_ctx;
 };
 
 /* Forward declaration: console_append is defined in the console-pane
@@ -1481,6 +1503,16 @@ on_view_query_tooltip (GtkWidget *widget, gint x, gint y,
  * Idempotent — we mark the view with set_data after the first call.
  * Called on every *stopped because new docs may have been opened
  * since the last stop. */
+/* A hooked view can be closed while the debug window lives; forget it so
+ * detach_hover_from_views() does not touch a destroyed widget. */
+static void
+on_hover_view_destroy (GtkWidget *view, gpointer user_data)
+{
+    MooGdbWin *win = (MooGdbWin *) user_data;
+    if (win->hover_views)
+        g_ptr_array_remove_fast (win->hover_views, view);
+}
+
 static void
 attach_hover_to_view (MooGdbWin *win, MooEditView *view)
 {
@@ -1490,8 +1522,28 @@ attach_hover_to_view (MooGdbWin *win, MooEditView *view)
     gtk_widget_set_has_tooltip (GTK_WIDGET (view), TRUE);
     g_signal_connect (view, "query-tooltip",
                       G_CALLBACK (on_view_query_tooltip), win);
+    g_signal_connect (view, "destroy",
+                      G_CALLBACK (on_hover_view_destroy), win);
     g_object_set_data (G_OBJECT (view), MOO_GDB_HOVER_HOOKED_KEY,
                        GINT_TO_POINTER (1));
+    g_ptr_array_add (win->hover_views, view);
+}
+
+/* Undo attach_hover_to_view for every still-live view.  Without this the
+ * handlers stay connected to documents that outlive the debug window, and
+ * hovering any of them dereferences the freed MooGdbWin; the stale
+ * HOOKED_KEY would also stop a new window from ever re-attaching. */
+static void
+detach_hover_from_views (MooGdbWin *win)
+{
+    if (!win->hover_views) return;
+    for (guint i = 0; i < win->hover_views->len; i++) {
+        GObject *view = G_OBJECT (win->hover_views->pdata[i]);
+        g_signal_handlers_disconnect_by_data (view, win);
+        g_object_set_data (view, MOO_GDB_HOVER_HOOKED_KEY, NULL);
+    }
+    g_ptr_array_free (win->hover_views, TRUE);
+    win->hover_views = NULL;
 }
 
 static void
@@ -1665,14 +1717,18 @@ build_console_pane (MooGdbWin *win)
     win->console_entry  = GTK_ENTRY (entry);
 }
 
+static void detach_visual_mark (GdbBreakpoint *bp);
+
 static void
 free_bp (gpointer p)
 {
     GdbBreakpoint *bp = (GdbBreakpoint *) p;
     if (!bp) return;
     g_free (bp->file);
-    if (bp->mark)
-        g_object_unref (bp->mark);
+    /* The buffer holds its own reference to the mark, so dropping ours is not
+       enough: without delete_line_mark the red dot stays in the gutter forever
+       once the debug window goes away, with no way to clear it. */
+    detach_visual_mark (bp);
     g_free (bp);
 }
 
@@ -2051,8 +2107,16 @@ static char *resolve_field   (MooGdbWin *win, const char *raw,
 typedef void (*BuildDoneCb) (MooGdbWin *win, gboolean success,
                               gpointer user_data);
 
-typedef struct {
-    MooGdbWin   *win;
+/* Two independent async operations share this context: the line reader and
+ * the subprocess wait.  Either can complete first -- a child can exit while
+ * output is still buffered -- so it is reference counted rather than freed by
+ * whichever finishes last.
+ *
+ * `win` is cleared by moo_gdb_win_free when the window is closed mid-build;
+ * every callback must therefore test it before use. */
+typedef struct _BuildCtx {
+    int          refs;
+    MooGdbWin   *win;         /* NULL once the window is gone */
     GSubprocess *proc;
     GDataInputStream *stream;
     char        *label;       /* config name, for log lines */
@@ -2060,10 +2124,20 @@ typedef struct {
     gpointer     cb_data;
 } BuildCtx;
 
+static BuildCtx *
+build_ctx_ref (BuildCtx *ctx)
+{
+    if (ctx) ctx->refs++;
+    return ctx;
+}
+
 static void
-build_ctx_free (BuildCtx *ctx)
+build_ctx_unref (BuildCtx *ctx)
 {
     if (!ctx) return;
+    if (--ctx->refs > 0) return;
+    if (ctx->win && ctx->win->build_ctx == ctx)
+        ctx->win->build_ctx = NULL;
     if (ctx->stream) g_object_unref (ctx->stream);
     if (ctx->proc)   g_object_unref (ctx->proc);
     g_free (ctx->label);
@@ -2081,24 +2155,28 @@ on_build_line (GObject *source, GAsyncResult *res, gpointer user_data)
     char *line = g_data_input_stream_read_line_finish_utf8 (
         G_DATA_INPUT_STREAM (source), res, &len, &err);
     if (err) {
-        /* Cancelled (subprocess detach) is benign — just stop
-         * reading.  Other errors get surfaced. */
-        if (!g_error_matches (err, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        /* Cancelled (subprocess detach, or the window closing) is benign —
+         * just stop reading.  Other errors get surfaced. */
+        if (!g_error_matches (err, G_IO_ERROR, G_IO_ERROR_CANCELLED) && ctx->win) {
             char *m = g_strdup_printf (
                 "[build] read error: %s\n", err->message);
             console_append (ctx->win, m, "error");
             g_free (m);
         }
         g_error_free (err);
+        build_ctx_unref (ctx);
         return;
     }
     if (!line) {
         /* EOF — wait for exit code to fire on_build_exit. */
+        build_ctx_unref (ctx);
         return;
     }
-    char *display = g_strdup_printf ("%s\n", line);
-    console_append (ctx->win, display, "build");
-    g_free (display);
+    if (ctx->win) {
+        char *display = g_strdup_printf ("%s\n", line);
+        console_append (ctx->win, display, "build");
+        g_free (display);
+    }
     g_free (line);
     read_build_line (ctx);
 }
@@ -2106,6 +2184,10 @@ on_build_line (GObject *source, GAsyncResult *res, gpointer user_data)
 static void
 read_build_line (BuildCtx *ctx)
 {
+    if (!ctx->win) {          /* window gone: stop reading, drop the ref */
+        build_ctx_unref (ctx);
+        return;
+    }
     g_data_input_stream_read_line_async (
         ctx->stream, G_PRIORITY_DEFAULT,
         ctx->win->build_cancel, on_build_line, ctx);
@@ -2123,9 +2205,17 @@ on_build_exit (GObject *source, GAsyncResult *res, gpointer user_data)
         code = g_subprocess_get_exit_status (G_SUBPROCESS (source));
     if (err) g_error_free (err);
 
+    gboolean success = (code == 0);
+
+    /* The window may have been closed while the build ran; the subprocess
+       wait still completes, so nothing below may touch it. */
+    if (!ctx->win) {
+        build_ctx_unref (ctx);
+        return;
+    }
+
     ctx->win->is_building = FALSE;
 
-    gboolean success = (code == 0);
     char *msg;
     if (success)
         msg = g_strdup_printf (
@@ -2139,7 +2229,7 @@ on_build_exit (GObject *source, GAsyncResult *res, gpointer user_data)
     BuildDoneCb cb     = ctx->cb;
     gpointer    cb_ud  = ctx->cb_data;
     MooGdbWin  *win    = ctx->win;
-    build_ctx_free (ctx);
+    build_ctx_unref (ctx);
     if (cb) cb (win, success, cb_ud);
 }
 
@@ -2198,10 +2288,14 @@ run_build (MooGdbWin *win, const char *cmd, const char *cwd,
     ctx->label   = g_strdup (label);
     ctx->cb      = cb;
     ctx->cb_data = cb_data;
+    ctx->refs    = 0;
+    win->build_ctx = ctx;
 
     win->is_building = TRUE;
-    read_build_line (ctx);
-    g_subprocess_wait_async (proc, win->build_cancel, on_build_exit, ctx);
+    /* One reference per outstanding async operation. */
+    read_build_line (build_ctx_ref (ctx));
+    g_subprocess_wait_async (proc, win->build_cancel,
+                             on_build_exit, build_ctx_ref (ctx));
     return TRUE;
 }
 
@@ -2666,6 +2760,7 @@ moo_gdb_win_new (MooEditWindow *window)
     win->bp_by_file  = g_hash_table_new_full (g_str_hash, g_str_equal,
                                                g_free, free_file_table);
     win->bp_by_number = g_hash_table_new (g_direct_hash, g_direct_equal);
+    win->hover_views  = g_ptr_array_new ();
     win->hover_cache  = g_hash_table_new_full (g_str_hash, g_str_equal,
                                                 g_free, g_free);
     win->hover_pending = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -2722,6 +2817,7 @@ moo_gdb_win_free (MooGdbWin *win)
         moo_edit_window_remove_pane (win->window, MOO_GDB_INSPECT_PANE_ID);
 
     clear_exec_mark (win);
+    detach_hover_from_views (win);
 
     drop_session (win);
     if (win->active_doc_handler)
@@ -2731,6 +2827,14 @@ moo_gdb_win_free (MooGdbWin *win)
     if (win->build_cancel) {
         g_cancellable_cancel (win->build_cancel);
         g_object_unref (win->build_cancel);
+        win->build_cancel = NULL;
+    }
+    /* Cancelling completes the wait and the read rather than aborting them,
+       so both callbacks still run.  Disown the context so they do not write
+       through a freed window. */
+    if (win->build_ctx) {
+        win->build_ctx->win = NULL;
+        win->build_ctx = NULL;
     }
     if (win->project) moo_gdb_project_free (win->project);
 
