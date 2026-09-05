@@ -48,6 +48,10 @@
 #cmakedefine MOO_BUILD_CTAGS         1
 #cmakedefine MOO_BUILD_SPELL         1
 #cmakedefine MOO_BUILD_MARKDOWN      1
+#cmakedefine MOO_BUILD_WIKI          1
+#cmakedefine MOO_BUILD_GDB           1
+#cmakedefine MOO_BUILD_TERMINAL      1
+#cmakedefine HAVE_VTE                1
 #cmakedefine MOO_ENABLE_COVERAGE     1
 #cmakedefine MOO_BROKEN_GTK_THEME    1
 

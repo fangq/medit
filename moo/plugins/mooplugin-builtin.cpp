@@ -19,7 +19,7 @@
 #ifdef MOO_ENABLE_PYTHON
 #include "moopython/moopython-builtin.h"
 #endif
-#ifdef HAVE_VTE
+#if defined(MOO_BUILD_TERMINAL) || defined(HAVE_VTE)
 extern "C" gboolean _moo_terminal_plugin_init(void);
 #endif
 #if defined(MOO_BUILD_MARKDOWN) || defined(MOO_BUILD_WIKI)
@@ -36,7 +36,7 @@ moo_plugin_init (void)
     if (!moo_getenv_bool ("MOO_DISABLE_PYTHON"))
         _moo_python_builtin_init ();
 #endif
-#ifdef HAVE_VTE
+#if defined(MOO_BUILD_TERMINAL) || defined(HAVE_VTE)
     if (!moo_getenv_bool ("MOO_DISABLE_TERMINAL"))
         _moo_terminal_plugin_init ();
 #endif
