@@ -5,11 +5,15 @@
 find_package(PkgConfig REQUIRED)
 
 # ── Core GTK / GLib stack ─────────────────────────────────────────────────────
-pkg_check_modules(GTK     REQUIRED IMPORTED_TARGET gtk+-3.0)
-pkg_check_modules(GLIB    REQUIRED IMPORTED_TARGET glib-2.0)
-pkg_check_modules(GTHREAD REQUIRED IMPORTED_TARGET gthread-2.0)
-pkg_check_modules(GMODULE REQUIRED IMPORTED_TARGET gmodule-2.0)
-pkg_check_modules(XML     REQUIRED IMPORTED_TARGET libxml-2.0)
+# Minimum versions: GTK 3.22 is the last 3.x feature release and the floor for
+# gdk_monitor_*; GLib 2.56 is what Ubuntu 18.04 / RHEL 8 shipped.  These used
+# to be unversioned, which meant a build could get surprisingly far on a stack
+# far older than anything the code actually supports.
+pkg_check_modules(GTK     REQUIRED IMPORTED_TARGET "gtk+-3.0 >= 3.22")
+pkg_check_modules(GLIB    REQUIRED IMPORTED_TARGET "glib-2.0 >= 2.56")
+pkg_check_modules(GTHREAD REQUIRED IMPORTED_TARGET "gthread-2.0 >= 2.56")
+pkg_check_modules(GMODULE REQUIRED IMPORTED_TARGET "gmodule-2.0 >= 2.56")
+pkg_check_modules(XML     REQUIRED IMPORTED_TARGET "libxml-2.0 >= 2.9")
 
 # ── GLib minor-version check (mirrors MOO_CHECK_MINOR_VERSION(GLIB,...,[32])) ─
 execute_process(

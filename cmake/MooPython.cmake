@@ -50,7 +50,8 @@ else()
         find_package(Python3 "${_moo_want_python}" EXACT
             COMPONENTS Interpreter Development)
     else()
-        find_package(Python3 3.6 COMPONENTS Interpreter Development)
+        # 3.6 went EOL in 2021; 3.8 is the oldest still seen in the wild.
+        find_package(Python3 3.8 COMPONENTS Interpreter Development)
     endif()
 
     if(NOT Python3_FOUND)
@@ -72,22 +73,22 @@ else()
     message(STATUS "  libs:     ${PYTHON_LIBS}")
 endif()
 
-# ── Check for pygobject-3.0 ≥ 3.0 (replaces PKG_CHECK_MODULES PYGTK) ─────────
+# ── Check for pygobject-3.0 ≥ 3.30 (replaces PKG_CHECK_MODULES PYGTK) ───────
 # Only mark the dependency REQUIRED when the user explicitly asked for Python
 # (MOO_WITH_PYTHON=yes).  In "auto" mode (the default) and on Win32 cross-
 # compile, treat pygobject as optional so the build degrades gracefully to
 # no-Python instead of failing the whole configure step.
 if(_moo_want_python STREQUAL "yes" AND
    NOT (CMAKE_CROSSCOMPILING AND MOO_OS_WIN32))
-    pkg_check_modules(PYGTK REQUIRED IMPORTED_TARGET pygobject-3.0>=3.0)
+    pkg_check_modules(PYGTK REQUIRED IMPORTED_TARGET pygobject-3.0>=3.30)
 else()
-    pkg_check_modules(PYGTK IMPORTED_TARGET pygobject-3.0>=3.0)
+    pkg_check_modules(PYGTK IMPORTED_TARGET pygobject-3.0>=3.30)
 endif()
 
 if(NOT PYGTK_FOUND)
     if(_moo_want_python STREQUAL "yes" AND NOT (CMAKE_CROSSCOMPILING AND MOO_OS_WIN32))
         message(FATAL_ERROR
-            "Python support requested but pygobject-3.0 >= 3.0 not found")
+            "Python support requested but pygobject-3.0 >= 3.30 not found")
     else()
         set(MOO_ENABLE_PYTHON FALSE)
         message(WARNING "pygobject-3.0 not found – disabling Python support")

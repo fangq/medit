@@ -51,9 +51,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # ── Required build tools ──────────────────────────────────────────────────────
-find_program(MOO_PYTHON
-    NAMES python3 python3.13 python3.12 python3.11 python3.10
-          python3.9 python3.8 python3.7 python3.6 python)
+# A hardcoded list of point releases rots; python3 is enough on any platform
+# that has one, and "python" covers the rest.
+find_program(MOO_PYTHON NAMES python3 python)
 if(NOT MOO_PYTHON)
     message(FATAL_ERROR "Python interpreter not found; it is required for the build")
 endif()

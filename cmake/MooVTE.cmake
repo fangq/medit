@@ -15,7 +15,8 @@ if(MOO_OS_WIN32)
 endif()
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(VTE IMPORTED_TARGET vte-2.91)
+# 0.52 is the Ubuntu 18.04 / Debian 10 vintage; spawn_async needs 0.48+.
+pkg_check_modules(VTE IMPORTED_TARGET "vte-2.91 >= 0.52")
 
 if(VTE_FOUND)
     set(MOO_BUILD_TERMINAL TRUE)
