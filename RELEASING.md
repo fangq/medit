@@ -74,11 +74,22 @@ Restore `MOO_VERSION_SUFFIX "devel"` and open a new `NEWS` section.
 
 Not release blockers, but tracked:
 
-- ~56 GLib/GTK **deprecation** warnings remain (`G_INLINE_FUNC`,
-  `g_type_class_add_private`, `GParameter`, `gdk_threads_*`,
-  `gdk_screen_get_number`), largely in the vendored `eggsmclient` and
-  `gtksourceview` trees. `GLIB_DISABLE_DEPRECATION_WARNINGS` is defined even in
-  strict mode until they are retired; see `cmake/MooCompilerFlags.cmake`.
+- **Deprecation warnings.** A strict build (`-DMOO_STRICT_MODE=ON`) is
+  error-free but prints **297** `-Wdeprecated-declarations` warnings, spread
+  across `mooglade.c` (28), `moofontsel.c` (24), `mooeditwindow.cpp` (16),
+  `mootextview.c` (14), `moopane.c` (12) and the action/UI-XML files. They are
+  deliberately non-fatal (`-Wno-error=deprecated-declarations`) so the
+  `-Werror` gate is usable today; retiring them is the `GtkAction`/`GtkStock`
+  work listed below.
+  Separately, ~56 GLib **macro** deprecations (`G_INLINE_FUNC`,
+  `G_UNICODE_COMBINING_MARK`, `g_type_class_add_private`) are reported via
+  `#pragma` and so are not covered by that flag; they are suppressed with
+  `GLIB_DISABLE_DEPRECATION_WARNINGS`, which stays defined even in strict mode
+  until they are fixed. Most are in the vendored `eggsmclient` and
+  `gtksourceview` trees. See `cmake/MooCompilerFlags.cmake`.
+
+  The **default** build is warning-free, and that is the baseline worth
+  keeping.
 - `GtkAction`/`GtkUIManager` are used throughout and are deprecated since GTK
   3.10. They work fine on 3.x; porting to `GAction`/`GMenu` is a separate
   project.
