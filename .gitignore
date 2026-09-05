@@ -1,0 +1,76 @@
+# ── Build trees ───────────────────────────────────────────────────────────────
+/build/
+/build-*/
+_build/
+cmake-build-*/
+
+# ── CMake ─────────────────────────────────────────────────────────────────────
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+Testing/
+compile_commands.json
+
+# ── Autotools (legacy build; generated files are not tracked) ─────────────────
+/autom4te.cache/
+/config.h
+/config.log
+/config.status
+/stamp-h1
+/libtool
+/Makefile
+Makefile.in
+.deps/
+.dirstamp
+*.lo
+*.la
+.libs/
+
+# ── Compiled output ───────────────────────────────────────────────────────────
+*.o
+*.a
+*.so
+*.so.*
+*.dll
+*.exe
+/moo/medit
+/moo/medit.exe
+
+# ── Generated sources ─────────────────────────────────────────────────────────
+/moo/marshals.c
+/moo/marshals.h
+/moo/moo-pixbufs.h
+/moo/mooapp-credits.h
+*-gxml.h
+/moo/*-types.defs
+/moo/medit-app/medit.desktop
+*.gmo
+*.mo
+/po/POTFILES
+/po/*.pot
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+
+# ── Editor / OS noise ─────────────────────────────────────────────────────────
+*~
+*.orig
+*.rej
+*.bak
+.DS_Store
+tags
+TAGS
+
+# ── Test / run output ─────────────────────────────────────────────────────────
+/test.log
+*.trs
+called-functions
+*-called-functions
+*-functions
+not-covered-*
+*.gcda
+*.gcno
+*.gcov
