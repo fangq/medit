@@ -230,6 +230,37 @@ enum {
 };
 
 
+/* Cross-file helpers.  These used to be declared with scattered `extern`
+   statements -- including two nested inside function bodies -- in whichever
+   file happened to need them, which meant the definitions were never checked
+   against a visible prototype. */
+
+/* mootextview-input.c: rectangular (box) selection */
+char    *box_sel_get_text        (GtkTextView   *tv,
+                                  int            ax,
+                                  int            ay,
+                                  int            bx,
+                                  int            by);
+int      box_sel_visual_col_at_x (GtkTextView   *tv,
+                                  int            line,
+                                  int            buf_x,
+                                  gboolean       right_bound);
+void     box_sel_clear           (MooTextView   *view);
+void     box_sel_delete          (MooTextView   *view);
+
+/* mootextview.c: Ctrl+scroll font zoom */
+void     moo_text_view_reset_font_size (MooTextView *view);
+
+/* mooedit-fileops.cpp: long-line visual truncation */
+void     moo_ll_apply            (GtkTextBuffer *buffer);
+void     moo_ll_apply_range      (GtkTextBuffer *buffer,
+                                  int            first_line,
+                                  int            last_line);
+void     moo_ll_remove_all       (GtkTextBuffer *buffer);
+void     moo_ll_reveal_line      (GtkTextBuffer *buffer,
+                                  int            line);
+
+
 G_END_DECLS
 
 #endif /* MOO_TEXT_VIEW_PRIVATE_H */

@@ -1232,6 +1232,11 @@ MOO_PLUGIN_DEFINE (Terminal, terminal,
                    terminal_window_plugin_get_type (),
                    0)
 
+/* Declared here rather than in a header: mooplugin-builtin.cpp declares it
+   extern "C" at its own call site, the same way it does for the other
+   built-in plugins. */
+gboolean _moo_terminal_plugin_init (void);
+
 gboolean
 _moo_terminal_plugin_init (void)
 {

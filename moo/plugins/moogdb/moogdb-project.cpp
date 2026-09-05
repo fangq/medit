@@ -65,7 +65,7 @@ find_project_root (const char *start_path,
     while (dir && *dir) {
         for (int i = 0; PROJECT_DIRS[i]; i++) {
             char *candidate = g_build_filename (dir, PROJECT_DIRS[i],
-                                                  "launch.json", NULL);
+                                                  "launch.json", (const char*) NULL);
             if (g_file_test (candidate, G_FILE_TEST_IS_REGULAR)) {
                 g_free (candidate);
                 *out_root = dir;
@@ -134,7 +134,7 @@ load_tasks (const char *root, const char *config_dir)
 {
     GHashTable *map = g_hash_table_new_full (g_str_hash, g_str_equal,
                                               g_free, g_free);
-    char *path = g_build_filename (root, config_dir, "tasks.json", NULL);
+    char *path = g_build_filename (root, config_dir, "tasks.json", (const char*) NULL);
     char *body = NULL;
     gsize len  = 0;
     if (!g_file_get_contents (path, &body, &len, NULL)) {
@@ -265,7 +265,7 @@ moo_gdb_project_load (const char *start_path, GError **error)
         return NULL;
     }
     char *launch_path = g_build_filename (root, config_dir,
-                                            "launch.json", NULL);
+                                            "launch.json", (const char*) NULL);
     char *body = NULL;
     gsize len  = 0;
     if (!g_file_get_contents (launch_path, &body, &len, error)) {

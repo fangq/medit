@@ -1975,7 +1975,7 @@ process_p_elm (GtkTextView    *view,
     g_object_set (G_OBJECT (p_tag),
                   "pixels-above-lines", 8,
                   "pixels-below-lines", 8,
-                  NULL);
+                  (const char*) NULL);
 
     moo_html_new_line (view, buffer, iter, p_tag, FALSE);
     process_elm_body (view, buffer, elm, p_tag, iter);

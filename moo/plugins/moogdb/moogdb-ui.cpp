@@ -571,9 +571,9 @@ build_locals_section (MooGdbWin *win)
     for (int i = 0; i < (int) G_N_ELEMENTS (cols); i++) {
         GtkCellRenderer *r = gtk_cell_renderer_text_new ();
         if (cols[i].expand)
-            g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+            g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_END, (const char*) NULL);
         GtkTreeViewColumn *c = gtk_tree_view_column_new_with_attributes (
-            cols[i].label, r, "text", cols[i].idx, NULL);
+            cols[i].label, r, "text", cols[i].idx, (const char*) NULL);
         gtk_tree_view_column_set_resizable (c, TRUE);
         gtk_tree_view_column_set_expand    (c, cols[i].expand);
         gtk_tree_view_append_column (GTK_TREE_VIEW (view), c);
@@ -671,9 +671,9 @@ build_frames_section (MooGdbWin *win)
     for (int i = 0; i < (int) G_N_ELEMENTS (cols); i++) {
         GtkCellRenderer *r = gtk_cell_renderer_text_new ();
         if (cols[i].expand)
-            g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_START, NULL);
+            g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_START, (const char*) NULL);
         GtkTreeViewColumn *c = gtk_tree_view_column_new_with_attributes (
-            cols[i].label, r, "text", cols[i].idx, NULL);
+            cols[i].label, r, "text", cols[i].idx, (const char*) NULL);
         gtk_tree_view_column_set_resizable (c, TRUE);
         gtk_tree_view_column_set_expand    (c, cols[i].expand);
         gtk_tree_view_append_column (GTK_TREE_VIEW (view), c);
@@ -852,21 +852,21 @@ build_watches_section (MooGdbWin *win)
      * fires "edited" with the new value on Enter; Esc cancels silently. */
     {
         GtkCellRenderer *r = gtk_cell_renderer_text_new ();
-        g_object_set (r, "editable", TRUE, NULL);
+        g_object_set (r, "editable", TRUE, (const char*) NULL);
         g_signal_connect (r, "edited",
                           G_CALLBACK (on_watch_expr_edited), win);
         GtkTreeViewColumn *c = gtk_tree_view_column_new_with_attributes (
-            "Expression", r, "text", WATCHES_COL_EXPRESSION, NULL);
+            "Expression", r, "text", WATCHES_COL_EXPRESSION, (const char*) NULL);
         gtk_tree_view_column_set_resizable (c, TRUE);
         gtk_tree_view_append_column (GTK_TREE_VIEW (view), c);
     }
     {
         GtkCellRenderer *r = gtk_cell_renderer_text_new ();
-        g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+        g_object_set (r, "ellipsize", PANGO_ELLIPSIZE_END, (const char*) NULL);
         GtkTreeViewColumn *c = gtk_tree_view_column_new_with_attributes (
             "Value", r,
             "text",             WATCHES_COL_VALUE,
-            NULL);
+            (const char*) NULL);
         /* Bind the error column to the renderer's foreground via a
          * cell-data-func so we colour failures red.  Simpler: use
          * tree_view_column_add_attribute with foreground-set. */
@@ -878,7 +878,7 @@ build_watches_section (MooGdbWin *win)
                 g_object_set (cell,
                     "foreground", err ? "#c0392b" : NULL,
                     "foreground-set", err,
-                    NULL);
+                    (const char*) NULL);
             }, NULL, NULL);
         gtk_tree_view_column_set_resizable (c, TRUE);
         gtk_tree_view_column_set_expand    (c, TRUE);
@@ -1199,7 +1199,7 @@ build_inspect_toolbar (MooGdbWin *win)
     {
         GtkToolItem *lbl_item = gtk_tool_item_new ();
         GtkWidget   *lbl      = gtk_label_new ("Config: (none)");
-        g_object_set (lbl, "margin-start", 4, "margin-end", 4, NULL);
+        g_object_set (lbl, "margin-start", 4, "margin-end", 4, (const char*) NULL);
         gtk_container_add (GTK_CONTAINER (lbl_item), lbl);
         gtk_tool_item_set_tooltip_text (lbl_item,
             "Project root — directory containing .medit/launch.json "
@@ -1571,7 +1571,7 @@ console_append (MooGdbWin *win, const char *text, const char *tag_name)
     gtk_text_buffer_get_end_iter (win->console_buffer, &end);
     if (tag_name)
         gtk_text_buffer_insert_with_tags_by_name (
-            win->console_buffer, &end, text, -1, tag_name, NULL);
+            win->console_buffer, &end, text, -1, tag_name, (const char*) NULL);
     else
         gtk_text_buffer_insert (win->console_buffer, &end, text, -1);
 
@@ -1806,7 +1806,7 @@ attach_visual_mark (G_GNUC_UNUSED MooGdbWin *win, GdbBreakpoint *bp)
          * the show-line-marks property is on (the default is off).
          * Turn it on for the view we just dropped a mark in so the
          * gutter actually renders the red dot. */
-        g_object_set (view, "show-line-marks", TRUE, NULL);
+        g_object_set (view, "show-line-marks", TRUE, (const char*) NULL);
         break;
     }
     moo_edit_array_free (docs);
@@ -1899,7 +1899,7 @@ set_exec_mark (MooGdbWin *win, const char *file, int line)
     moo_line_mark_set_stock_id (win->exec_mark, "gtk-go-forward");
     moo_text_buffer_add_line_mark (MOO_TEXT_BUFFER (buf),
                                    win->exec_mark, line - 1);
-    g_object_set (view, "show-line-marks", TRUE, NULL);
+    g_object_set (view, "show-line-marks", TRUE, (const char*) NULL);
 
     moo_edit_window_set_active_doc (win->window, doc);
     GtkTextIter iter;
@@ -2257,7 +2257,7 @@ run_build (MooGdbWin *win, const char *cmd, const char *cwd,
 
     GError *err = NULL;
     GSubprocess *proc = g_subprocess_launcher_spawn (
-        launcher, &err, "sh", "-c", cmd, NULL);
+        launcher, &err, "sh", "-c", cmd, (const char*) NULL);
     g_object_unref (launcher);
     if (!proc) {
         char *m = g_strdup_printf (
@@ -2321,7 +2321,7 @@ any_source_newer (const char *dir, gint64 binary_mtime, int depth)
             !strcmp (name, "node_modules") ||
             !strcmp (name, ".git"))
             continue;
-        char *path = g_build_filename (dir, name, NULL);
+        char *path = g_build_filename (dir, name, (const char*) NULL);
         if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
             stale = any_source_newer (path, binary_mtime, depth + 1);
         } else if (g_str_has_suffix (name, ".c")   ||
@@ -2719,7 +2719,7 @@ moo_gdb_win_configure (MooGdbWin *win)
     GtkWidget *grid    = gtk_grid_new ();
     gtk_grid_set_row_spacing    (GTK_GRID (grid), 6);
     gtk_grid_set_column_spacing (GTK_GRID (grid), 8);
-    g_object_set (grid, "margin", 12, NULL);
+    g_object_set (grid, "margin", 12, (const char*) NULL);
     gtk_box_pack_start (GTK_BOX (content), grid, TRUE, TRUE, 0);
 
     GtkEntry *target_entry = add_labelled_entry (GTK_GRID (grid), 0,

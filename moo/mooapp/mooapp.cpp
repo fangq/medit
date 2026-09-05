@@ -1446,7 +1446,7 @@ moo_app_create_prefs_dialog (MooApp *app)
 
     /* Prefs dialog title */
     dialog = MOO_PREFS_DIALOG (moo_prefs_dialog_new (_("Preferences")));
-    g_object_set (dialog, "hide_on_delete", TRUE, NULL);
+    g_object_set (dialog, "hide_on_delete", TRUE, (const char*) NULL);
 
     moo_prefs_dialog_append_page (dialog, moo_edit_prefs_page_new_1 (moo_app_get_editor (app)));
     moo_prefs_dialog_append_page (dialog, moo_edit_prefs_page_new_2 (moo_app_get_editor (app)));

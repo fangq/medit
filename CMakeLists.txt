@@ -49,7 +49,9 @@ endif()
 # raw -std=c++11 flag in MooCompilerFlags.cmake.
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
+# C++14, not 17: the vendored Lua (moo/moolua/lua) still uses the `register`
+# storage class, which C++17 removed.
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

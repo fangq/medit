@@ -1537,7 +1537,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                 g_object_set (tag,
                               "foreground-rgba", &p->link,
                               "underline",       PANGO_UNDERLINE_SINGLE,
-                              NULL);
+                              (const char*) NULL);
             }
 
             if ((h = _moo_html_tag_get_heading (tag)) > 0)
@@ -1545,7 +1545,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                 /* Lift H1/H2 with a coloured tint; H3+ rely on size +
                  * weight alone to avoid a rainbow effect. */
                 if (h <= 2)
-                    g_object_set (tag, "foreground-rgba", &p->heading_fg, NULL);
+                    g_object_set (tag, "foreground-rgba", &p->heading_fg, (const char*) NULL);
             }
 
             if (_moo_html_tag_is_pre (tag))
@@ -1565,7 +1565,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                               "pixels-below-lines",         1,
                               "pixels-inside-wrap",         0,
                               "scale",                      0.92,
-                              NULL);
+                              (const char*) NULL);
             }
             else if (_moo_html_tag_is_table (tag))
             {
@@ -1579,7 +1579,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                               "scale",                     0.92,
                               "pixels-above-lines",        2,
                               "pixels-below-lines",        2,
-                              NULL);
+                              (const char*) NULL);
             }
             else if (_moo_html_tag_is_monospace (tag))
             {
@@ -1588,7 +1588,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                               "background-rgba", &p->code_bg,
                               "foreground-rgba", &p->code_fg,
                               "scale",           0.92,
-                              NULL);
+                              (const char*) NULL);
             }
 
             if (_moo_html_tag_is_blockquote (tag))
@@ -1602,7 +1602,7 @@ page_preview_restyle_tags (GtkWidget *html_view)
                               "style",                     PANGO_STYLE_ITALIC,
                               "pixels-above-lines",        4,
                               "pixels-below-lines",        4,
-                              NULL);
+                              (const char*) NULL);
             }
         },
         &pal);

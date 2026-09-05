@@ -1809,6 +1809,8 @@ _moo_icon_widget_class_init (MooIconWidgetClass *klass)
 
     widget_class->style_updated = moo_icon_widget_style_updated;
     widget_class->draw = moo_icon_widget_expose_event;
+    widget_class->get_preferred_width = moo_icon_widget_get_preferred_width;
+    widget_class->get_preferred_height = moo_icon_widget_get_preferred_height;
 }
 
 GtkWidget *
@@ -1843,7 +1845,6 @@ _moo_create_small_icon (MooSmallIcon icon)
 
     icon_widget = g_object_new (_moo_icon_widget_get_type (), (const char*) NULL);
     icon_widget->data = data;
-    gtk_widget_set_size_request (GTK_WIDGET (icon_widget), 7, 7 /* magic */);
 
     return GTK_WIDGET (icon_widget);
 }

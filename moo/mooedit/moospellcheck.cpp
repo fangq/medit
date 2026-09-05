@@ -64,7 +64,7 @@ on_tag_underline_rgba_notify (GObject       *object,
     GtkTextTagTable *table = GTK_IS_TEXT_TAG_TABLE (data) ? GTK_TEXT_TAG_TABLE (data) : NULL;
     char            *name  = NULL;
 
-    g_object_get (tag, "name", &name, NULL);
+    g_object_get (tag, "name", &name, (const char*) NULL);
 
     /* Anonymous tag with rgba set → gspell's misspelled-word tag.
      * Disconnect so our own override doesn't recurse. */
@@ -83,7 +83,7 @@ on_tag_underline_rgba_notify (GObject       *object,
             tag, (gpointer) on_tag_underline_rgba_notify, table);
         g_object_set (tag,
                       "underline-rgba", use,
-                      NULL);
+                      (const char*) NULL);
 
         /* Force max priority so any other underline-set tag in the same
          * range can't override us. */
@@ -104,7 +104,7 @@ on_spell_tag_added (GtkTextTagTable *table,
 {
     char *name = NULL;
 
-    g_object_get (tag, "name", &name, NULL);
+    g_object_get (tag, "name", &name, (const char*) NULL);
 
     /* Anonymous tag — most likely gspell's about-to-be-styled misspelled
      * tag.  Watch for underline-rgba to flip from unset to set.  Pass
@@ -153,7 +153,7 @@ update_underline_rgba_for_theme (GtkTextTagTable *table, GtkWidget *view_widget)
                 g_object_get (text_style,
                               "background",     &bg_str,
                               "background-set", &bg_set,
-                              NULL);
+                              (const char*) NULL);
                 if (bg_set && bg_str && gdk_rgba_parse (&bg, bg_str))
                     bg_from_scheme = TRUE;
                 g_free (bg_str);
@@ -214,9 +214,9 @@ restyle_existing_gspell_tag (GtkTextTag *tag, gpointer data)
     g_object_get (tag,
                   "name",               &name,
                   "underline-rgba-set", &rgba_set,
-                  NULL);
+                  (const char*) NULL);
     if (name == NULL && rgba_set)
-        g_object_set (tag, "underline-rgba", new_color, NULL);
+        g_object_set (tag, "underline-rgba", new_color, (const char*) NULL);
     g_free (name);
 }
 
@@ -255,7 +255,7 @@ init_enchant_config_dir_once (void)
         if (g_getenv ("ENCHANT_CONFIG_DIR") == NULL)
         {
             char        *dir = g_build_filename (g_get_user_config_dir (),
-                                                 "medit", "enchant", NULL);
+                                                 "medit", "enchant", (const char*) NULL);
             mgw_errno_t  err = MGW_E_NOERROR;
             mgw_mkdir_with_parents (dir, 0700, &err);
             g_setenv ("ENCHANT_CONFIG_DIR", dir, TRUE);

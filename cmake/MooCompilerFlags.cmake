@@ -59,10 +59,16 @@ macro(moo_collect_compiler_flags)
     set(MOO_EXTRA_CXXFLAGS "")
 
     if(MOO_GCC)
-        # Deprecation warnings are noisy while GtkAction/GtkUIManager are still
-        # in use, so they are silenced by default -- but not in strict mode,
-        # which is where the remaining GTK3 deprecations should be visible.
-        if(NOT MOO_STRICT_MODE)
+        # Deprecation warnings are noisy while GtkAction/GtkUIManager and the
+        # other GTK2-era API are still in use, so they are silenced by default.
+        # Strict mode shows them instead of hiding them, but does not make them
+        # fatal -- there are still ~56 of them (g_type_class_add_private,
+        # GParameter, gdk_threads_*, gdk_screen_get_number, ...), and they are a
+        # separate cleanup from the -Werror gate on real warnings.
+        if(MOO_STRICT_MODE)
+            _moo_check_c_flag(-Wno-error=deprecated-declarations   MOO_EXTRA_CFLAGS)
+            _moo_check_cxx_flag(-Wno-error=deprecated-declarations MOO_EXTRA_CXXFLAGS)
+        else()
             _moo_check_c_flag(-Wno-deprecated-declarations   MOO_EXTRA_CFLAGS)
             _moo_check_cxx_flag(-Wno-deprecated-declarations MOO_EXTRA_CXXFLAGS)
         endif()
@@ -77,8 +83,10 @@ macro(moo_collect_compiler_flags)
             _moo_check_cxx_flag("${flag}" MOO_EXTRA_CXXFLAGS)
         endforeach()
 
-        # C++ only flags
-        foreach(flag -std=c++11 -fno-rtti)
+        # C++ only flags.  The language standard comes from
+        # CMAKE_CXX_STANDARD in the top-level CMakeLists.txt, not from a raw
+        # -std= flag here.
+        foreach(flag -fno-rtti)
             _moo_check_cxx_flag("${flag}" MOO_EXTRA_CXXFLAGS)
         endforeach()
 
@@ -146,9 +154,14 @@ macro(moo_collect_compiler_flags)
             G_DISABLE_ASSERT)
     endif()
 
-    if(NOT MOO_STRICT_MODE)
-        list(APPEND MOO_EXTRA_DEFS GLIB_DISABLE_DEPRECATION_WARNINGS=1)
-    endif()
+    # GLib's *macro* deprecations (G_INLINE_FUNC, G_UNICODE_COMBINING_MARK,
+    # g_type_class_add_private, ...) are reported via #pragma, so they are not
+    # covered by -Wno-error=deprecated-declarations and would make -Werror
+    # unusable.  There are ~56 of them, largely in the vendored eggsmclient and
+    # gtksourceview trees.  Suppressed for now in both modes; retiring them is
+    # a separate cleanup, after which this can be limited to non-strict builds
+    # again.
+    list(APPEND MOO_EXTRA_DEFS GLIB_DISABLE_DEPRECATION_WARNINGS=1)
 endmacro()
 
 # ── Apply all flags to a target ───────────────────────────────────────────────

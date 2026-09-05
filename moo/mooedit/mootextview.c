@@ -25,7 +25,6 @@
 #include "mooedit/mootextbuffer.h"
 
 /* LL_EXTERN_DECL */
-extern void moo_ll_apply_range (GtkTextBuffer *buffer, int first_line, int last_line);
 #include "mooedit/mootextfind.h"
 #include "mooedit/mootext-private.h"
 #include "mooedit/mooeditprefs.h"
@@ -109,16 +108,6 @@ static void     moo_text_view_remove        (GtkContainer       *container,
 #define MOO_LL_TAG "moo-ll-hidden"
 #define MOO_LL_MARKER "moo-ll-marker"
 
-extern void moo_ll_apply (GtkTextBuffer *buffer);
-/* Box selection text extraction (defined in mootextview-input.c) */
-extern char *box_sel_get_text (GtkTextView *tv, int ax, int ay, int bx, int by);
-extern int box_sel_visual_col_at_x (GtkTextView *tv, int line, int buf_x,
-                                    gboolean right_bound);
-extern void box_sel_clear (MooTextView *view);
-extern void box_sel_delete (MooTextView *view);
-extern void moo_ll_remove_all (GtkTextBuffer *buffer);
-extern void moo_ll_reveal_line (GtkTextBuffer *buffer, int line);
-extern void moo_ll_apply_range (GtkTextBuffer *buffer, int first_line, int last_line);
 
 static gboolean
 moo_ll_click_handler (GtkWidget *widget, GdkEventButton *event, gpointer data)
@@ -281,7 +270,6 @@ moo_ll_after_insert (GtkTextBuffer *buffer,
                      gint           len,
                      gpointer       user_data)
 {
-    extern void moo_ll_apply_range (GtkTextBuffer *buf, int first, int last);
     GtkTextIter start_iter;
     int first_line, last_line;
 
@@ -3807,7 +3795,6 @@ moo_text_view_paste_clipboard (GtkTextView *text_view)
      * The old code used moo_ll_apply_range(buffer, 0, _n-1) which rescanned
      * the ENTIRE buffer on every paste — O(n) for a 25 k-line file. */
     {
-        extern void moo_ll_apply_range (GtkTextBuffer *buf, int first, int last);
         /* Ensure nowrap flag is set for new documents opened via paste */
         if (!GPOINTER_TO_INT (g_object_get_data (G_OBJECT (buffer), "moo-nowrap-mode")))
         {
