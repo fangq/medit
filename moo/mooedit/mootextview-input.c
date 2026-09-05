@@ -717,7 +717,9 @@ _moo_text_view_update_text_cursor (MooTextView *view,
 
     tcursor = MOO_TEXT_VIEW_GET_CLASS (view)->get_text_cursor (view, x, y);
 
-    if (tcursor == view->priv->text_cursor && FALSE /* GTK3: mouse_cursor_obscured check removed */)
+    /* Without this early-out a fresh GdkCursor was created and installed on
+       every single motion event -- an X round-trip per pixel of movement. */
+    if (tcursor == view->priv->text_cursor && !view->priv->mouse_cursor_obscured)
         return;
 
     switch (tcursor)
@@ -738,7 +740,7 @@ _moo_text_view_update_text_cursor (MooTextView *view,
 
     gdk_window_set_cursor (gtk_text_view_get_window (text_view, GTK_TEXT_WINDOW_TEXT), cursor);
 
-    /* GTK3: mouse_cursor_obscured removed */
+    view->priv->mouse_cursor_obscured = FALSE;
     view->priv->text_cursor = tcursor;
 
     if (cursor)
@@ -757,13 +759,18 @@ set_invisible_cursor (GdkWindow *window)
 static void
 text_view_obscure_mouse_cursor (GtkTextView *text_view)
 {
-    if (FALSE /* GTK3: mouse_cursor_obscured check removed */)
+    MooTextView *view = MOO_TEXT_VIEW (text_view);
+
+    if (!view->priv->mouse_cursor_obscured)
     {
         GdkWindow *window =
                 gtk_text_view_get_window (text_view,
                                           GTK_TEXT_WINDOW_TEXT);
-        set_invisible_cursor (window);
-        /* GTK3: mouse_cursor_obscured removed */
+        if (window)
+        {
+            set_invisible_cursor (window);
+            view->priv->mouse_cursor_obscured = TRUE;
+        }
     }
 }
 

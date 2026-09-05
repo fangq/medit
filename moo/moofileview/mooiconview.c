@@ -1019,7 +1019,12 @@ moo_icon_view_realize (GtkWidget *widget)
             | GDK_BUTTON_RELEASE_MASK
             | GDK_EXPOSURE_MASK
             | GDK_ENTER_NOTIFY_MASK
-            | GDK_LEAVE_NOTIFY_MASK;
+            | GDK_LEAVE_NOTIFY_MASK
+            /* GTK2 delivered the wheel as button 4/5 presses; GTK3 needs
+               these, without which ::scroll_event was never called. */
+            | GDK_SCROLL_MASK
+            | GDK_SMOOTH_SCROLL_MASK
+            | GDK_TOUCH_MASK;
 
     attributes.visual = gtk_widget_get_visual (widget);
     attributes.wclass = GDK_INPUT_OUTPUT;
@@ -1038,12 +1043,20 @@ moo_icon_view_realize (GtkWidget *widget)
 static void
 moo_icon_view_unrealize (GtkWidget *widget)
 {
-    (void) widget;
+    GdkWindow *window = gtk_widget_get_window (widget);
 
-    gtk_widget_unregister_window (widget, gtk_widget_get_window (widget)); /* GTK3 fix */
-    gdk_window_destroy (gtk_widget_get_window (widget));
-    gtk_widget_set_window (widget, NULL);
-    gtk_widget_set_realized (widget, FALSE);
+    if (window)
+    {
+        gtk_widget_unregister_window (widget, window);
+        gdk_window_destroy (window);
+        gtk_widget_set_window (widget, NULL);
+    }
+
+    /* Chain up rather than open-coding the teardown: GtkWidget's default
+       unrealize also runs gtk_selection_remove_all(), and this widget is both
+       a drag source and a drag destination, so its DnD registrations
+       otherwise leaked across every realize cycle. */
+    GTK_WIDGET_CLASS (_moo_icon_view_parent_class)->unrealize (widget);
 }
 
 

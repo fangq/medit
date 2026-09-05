@@ -46,6 +46,7 @@ struct _MooComboPrivate {
     GtkSizeGroup* size_group;
 
     GtkWidget *popup;
+    gboolean popup_grabbed;   /* TRUE while we hold a gdk_seat_grab */
     GtkTreeView *treeview;
     GtkTreeViewColumn *column;
     GtkTreeModel *model;
@@ -586,18 +587,30 @@ moo_combo_popup_real (MooCombo *combo)
 
     gtk_widget_show (combo->priv->popup);
 
-    /* GTK3: ensure-style call removed (no longer needed) */
-    gtk_widget_override_background_color (GTK_WIDGET (combo->priv->treeview), GTK_STATE_FLAG_ACTIVE,
-                          NULL); /* GTK3: use CSS styling instead of direct style access */
-    gtk_widget_override_background_color (GTK_WIDGET (combo->priv->treeview), GTK_STATE_FLAG_ACTIVE,
-                          NULL); /* GTK3: use CSS styling instead of direct style access */
+    /* The GTK2 code overrode base[ACTIVE]/bg[ACTIVE] here so the popup kept a
+       visible selection while unfocused; the conversion left two identical
+       calls passing NULL, which *removes* an override rather than setting one.
+       The :selected style class handles this in GTK3. */
 
     gtk_grab_add (combo->priv->popup);
-    /* GTK3: gdk_pointer_grab deprecated, use gdk_seat_grab or gtk_grab_add instead */
-    /* GTK3: gdk_pointer_grab deprecated, use gdk_seat_grab or gtk_grab_add instead */
-    /* GTK3: gdk_pointer_grab deprecated, use gdk_seat_grab or gtk_grab_add instead */
-    /* GTK3: gdk_pointer_grab deprecated, use gdk_seat_grab or gtk_grab_add instead */
-    /* GTK3: gdk_pointer_grab deprecated, use gdk_seat_grab or gtk_grab_add instead */
+
+    /* The pointer grab was dropped in the GTK3 conversion, leaving only the
+       GTK-level grab -- so clicks outside the popup were never routed to
+       popup_button_press and the list would not dismiss.  gdk_seat_grab is
+       the GTK3 replacement for gdk_pointer_grab. */
+    {
+        GdkWindow *popup_window = gtk_widget_get_window (combo->priv->popup);
+        GdkSeat *seat = gdk_display_get_default_seat (
+            gtk_widget_get_display (combo->priv->popup));
+
+        if (popup_window && seat)
+        {
+            if (gdk_seat_grab (seat, popup_window,
+                               GDK_SEAT_CAPABILITY_ALL_POINTING,
+                               TRUE, NULL, NULL, NULL, NULL) == GDK_GRAB_SUCCESS)
+                combo->priv->popup_grabbed = TRUE;
+        }
+    }
 
     g_signal_connect_swapped (combo->entry, "focus-out-event",
                               G_CALLBACK (entry_focus_out), combo);
@@ -637,7 +650,15 @@ moo_combo_popdown_real (MooCombo       *combo)
                                           (gpointer) list_button_press,
                                           combo);
 
-    gdk_pointer_ungrab (GDK_CURRENT_TIME);
+    /* Only release a grab we actually took.  The unconditional
+       gdk_pointer_ungrab that used to live here could release a grab held by
+       an unrelated widget (a menu, or a drag in progress). */
+    if (combo->priv->popup_grabbed)
+    {
+        gdk_seat_ungrab (gdk_display_get_default_seat (
+            gtk_widget_get_display (combo->priv->popup)));
+        combo->priv->popup_grabbed = FALSE;
+    }
     gtk_grab_remove (combo->priv->popup);
     gtk_widget_hide (combo->priv->popup);
 }

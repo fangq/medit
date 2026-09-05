@@ -103,6 +103,10 @@ struct MooTextViewPrivate {
     MooTextViewClipboard *clipboard;
 
     MooTextCursor text_cursor;
+    /* GtkTextView keeps its own mouse_cursor_obscured flag private in GTK3,
+       so track it here: set when the pointer is hidden while typing, cleared
+       when a real cursor is installed again. */
+    gboolean mouse_cursor_obscured;
 
     /***********************************************************************/
     /* Drawing
