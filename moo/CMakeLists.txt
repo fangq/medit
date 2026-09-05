@@ -432,6 +432,21 @@ if(MOO_OS_UNIX AND MOO_BUILD_APP)
         FILES       "${_bin}/medit-app/medit.desktop"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
     )
+
+    # AppStream metainfo, so medit shows up in GNOME Software / KDE Discover /
+    # Flathub.  Not translated through intltool: the file has no _-prefixed
+    # keys, and intltool is on its way out anyway.
+    string(TIMESTAMP _moo_release_date "%Y-%m-%d" UTC)
+    set(MOO_RELEASE_DATE "${_moo_release_date}")
+    configure_file(
+        "${_top}/data/medit.metainfo.xml.in"
+        "${_bin}/data/io.github.fangq.medit.metainfo.xml"
+        @ONLY
+    )
+    install(
+        FILES       "${_bin}/data/io.github.fangq.medit.metainfo.xml"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo"
+    )
 endif()
 
 # ════════════════════════════════════════════════════════════════════════════

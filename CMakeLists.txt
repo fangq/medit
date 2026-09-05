@@ -15,11 +15,17 @@ else()
     set(MOO_DISPLAY_VERSION "${MOO_VERSION}")
 endif()
 
-# Project contact / copyright
-set(MOO_WEBSITE     "http://mooedit.sourceforge.net/")
-set(MOO_WEB_CONTACT "http://mooedit.sourceforge.net/contact.html")
-set(MOO_EMAIL       "emuntyan@users.sourceforge.net")
-set(MOO_COPYRIGHT   "2004-2014 Yevgen Muntyan <${MOO_EMAIL}>")
+# Project contact / copyright.
+#
+# medit is a fork: Yevgen Muntyan wrote the original and keeps the authorship
+# credit, but he does not maintain this tree, so the contact points and the
+# package maintainer must not name him.  These feed PACKAGE_BUGREPORT, the
+# About dialog, the Windows installer and the CPack .deb/.dmg metadata.
+set(MOO_WEBSITE     "https://github.com/fangq/medit")
+set(MOO_WEB_CONTACT "https://github.com/fangq/medit/issues")
+set(MOO_EMAIL       "q.fang@neu.edu")
+set(MOO_MAINTAINER  "Qianqian Fang <${MOO_EMAIL}>")
+set(MOO_COPYRIGHT   "2004-2010 Yevgen Muntyan, 2025-2026 Qianqian Fang <${MOO_EMAIL}>")
 
 project(medit
     VERSION  ${MOO_MAJOR_VERSION}.${MOO_MINOR_VERSION}.${MOO_MICRO_VERSION}
@@ -461,7 +467,8 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "medit")
 
 if(MOO_OS_LINUX)
     set(CPACK_GENERATOR                 "DEB;TGZ")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${MOO_EMAIL}")
+    # Debian requires "Name <email>", not a bare address.
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${MOO_MAINTAINER}")
     set(CPACK_DEBIAN_PACKAGE_SECTION    "editors")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY   "optional")
     # Auto-detect shared-library deps (libgtk-3, libvte, libxml2, ...).

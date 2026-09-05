@@ -1,11 +1,13 @@
 [Desktop Entry]
 Name=medit
-_Comment=Text editor
+_GenericName=Text Editor
+_Comment=Edit text and source files
 Exec=medit %F
 Terminal=false
 Type=Application
 StartupNotify=true
-MimeType=text/plain;
+StartupWMClass=medit
 Icon=medit
-Categories=Utility;TextEditor;
-_Keywords=editor;texteditor;text
+Categories=Development;TextEditor;
+_Keywords=editor;texteditor;text;source;code;programming;
+MimeType=text/plain;text/x-chdr;text/x-csrc;text/x-c++hdr;text/x-c++src;text/x-java;text/x-python;text/x-python3;text/x-perl;text/x-ruby;text/x-lua;text/x-tcl;text/x-sql;text/x-makefile;text/x-cmake;text/x-diff;text/x-patch;text/x-tex;text/markdown;text/csv;text/html;text/css;text/xml;application/xml;application/json;application/javascript;application/x-shellscript;application/x-desktop;application/x-perl;application/x-ruby;application/x-yaml;

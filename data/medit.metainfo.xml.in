@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2025-2026 Qianqian Fang -->
+<component type="desktop-application">
+  <id>io.github.fangq.medit</id>
+  <launchable type="desktop-id">medit.desktop</launchable>
+
+  <name>medit</name>
+  <summary>Lightweight programmer's text editor</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-2.1-or-later</project_license>
+
+  <description>
+    <p>
+      medit is a lightweight, feature-rich text editor for programming and
+      everyday text editing. It offers a clean, fast editing experience with
+      syntax highlighting for over 100 languages, split views, an integrated
+      terminal, code folding, column selection and an extensible plugin system.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Syntax highlighting for 100+ programming and markup languages</li>
+      <li>Split views and split notebooks for side-by-side editing</li>
+      <li>Code folding for brace, keyword and indentation based languages</li>
+      <li>Rectangular (column) selection with full copy and paste support</li>
+      <li>Integrated terminal panel with multiple sessions</li>
+      <li>Integrated GDB debugger with breakpoints, stack, locals and watches</li>
+      <li>Live Markdown and wiki preview</li>
+      <li>Spell checking</li>
+      <li>Plugins in C, Python and Lua</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://github.com/fangq/medit</url>
+  <url type="bugtracker">https://github.com/fangq/medit/issues</url>
+
+  <!-- developer_name is what appstream < 1.0 understands; the developer
+       element is the 1.0+ replacement.  Both are emitted during the
+       transition. -->
+  <developer_name>Qianqian Fang</developer_name>
+  <developer id="io.github.fangq">
+    <name>Qianqian Fang</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <categories>
+    <category>Utility</category>
+    <category>TextEditor</category>
+    <category>Development</category>
+  </categories>
+
+  <keywords>
+    <keyword>editor</keyword>
+    <keyword>text</keyword>
+    <keyword>source</keyword>
+    <keyword>code</keyword>
+    <keyword>programming</keyword>
+  </keywords>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <releases>
+    <release version="@MOO_VERSION@" date="@MOO_RELEASE_DATE@">
+      <description>
+        <p>
+          Major modernisation release: ported from GTK2 to GTK3 and from
+          Python 2 to Python 3, with a new C++ libvte terminal, an integrated
+          GDB debugger, Markdown and wiki preview, spell checking, code
+          folding, column selection and a CMake build system.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>
