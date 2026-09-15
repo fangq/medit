@@ -30,8 +30,14 @@ if(MOO_ENABLE_DEBUG AND NOT DEFINED MOO_DEV_MODE_EXPLICIT)
 endif()
 
 # ── Helper: test and accumulate a flag ───────────────────────────────────────
+# The checks compile with -Werror so that a flag the compiler merely
+# *complains* about is rejected, not just one it fails on.  Without this a
+# flag could pass the probe here and then break the build under
+# MOO_STRICT_MODE on a different compiler version -- which is exactly what
+# -Wabi did: silently accepted by GCC 10, fatal on newer GCC.
 function(_moo_check_c_flag flag outvar)
     string(MAKE_C_IDENTIFIER "MOO_C_FLAG${flag}" varname)
+    set(CMAKE_REQUIRED_FLAGS "-Werror")
     check_c_compiler_flag("${flag}" ${varname})
     if(${varname})
         set(${outvar} "${${outvar}} ${flag}" PARENT_SCOPE)
@@ -40,6 +46,7 @@ endfunction()
 
 function(_moo_check_cxx_flag flag outvar)
     string(MAKE_C_IDENTIFIER "MOO_CXX_FLAG${flag}" varname)
+    set(CMAKE_REQUIRED_FLAGS "-Werror")
     check_cxx_compiler_flag("${flag}" ${varname})
     if(${varname})
         set(${outvar} "${${outvar}} ${flag}" PARENT_SCOPE)
@@ -129,8 +136,13 @@ macro(moo_collect_compiler_flags)
 
             # C++-only strict flags
             foreach(flag
+                # NOTE: no bare -Wabi.  It has warned about nothing since
+                # GCC 8, and newer GCC reports that fact --
+                #   error: '-Wabi' won't warn about anything [-Werror=abi]
+                # -- which is fatal in strict mode.  It needs a version
+                # argument (-Wabi=13) to do anything at all.
                 -fno-nonansi-builtins -fno-gnu-keywords
-                -Wctor-dtor-privacy -Wabi -Wstrict-null-sentinel
+                -Wctor-dtor-privacy -Wstrict-null-sentinel
                 -Woverloaded-virtual -Wsign-promo -Wnon-virtual-dtor
                 -Wno-long-long
             )
