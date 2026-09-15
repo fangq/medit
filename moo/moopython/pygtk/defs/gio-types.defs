@@ -1,0 +1,9 @@
+;; Minimal GIO types definitions
+;; This is a placeholder to satisfy the build requirement
+
+(define-object File
+  (in-module "Gio")
+  (parent "GObject")
+  (c-name "GFile")
+  (gtype-id "G_TYPE_FILE")
+)

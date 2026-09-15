@@ -107,6 +107,18 @@ message(STATUS "  pygobject libraries:    ${PYGTK_LIBRARIES}")
 set(PYGOBJECT_INCLUDE_DIRS ${PYGTK_INCLUDE_DIRS})
 set(PYGOBJECT_LIBRARIES    ${PYGTK_LIBRARIES})
 
-# PYGTK_DEFS_DIR / PYGOBJECT_DEFS_DIR – kept empty as in original
-set(PYGTK_DEFS_DIR     "")
-set(PYGOBJECT_DEFS_DIR "")
+# PYGTK_DEFS_DIR / PYGOBJECT_DEFS_DIR
+#
+# pygtk-2.0 shipped gtk/gdk/gio-types.defs and advertised their location via
+# `pkg-config --variable=defsdir`; pygobject-3.0 ships neither, so there is
+# nothing on the system to point the code generator's --register at.
+#
+# These used to be left empty, which interpolated to --register
+# "/gio-types.defs" -- an absolute path at the filesystem root.  That built
+# only on machines where someone had created those files at /, and failed
+# everywhere else (including CI) with
+#   FileNotFoundError: [Errno 2] No such file or directory: '/gio-types.defs'
+#
+# The stubs now live in the repository instead; see defs/README there.
+set(PYGTK_DEFS_DIR     "${CMAKE_SOURCE_DIR}/moo/moopython/pygtk/defs")
+set(PYGOBJECT_DEFS_DIR "${PYGTK_DEFS_DIR}")

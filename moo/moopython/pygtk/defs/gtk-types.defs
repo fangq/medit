@@ -1,0 +1,16 @@
+;; Minimal GTK types for legacy build compatibility
+;; Modern systems should use GObject Introspection
+
+(define-object Widget
+  (in-module "Gtk")
+  (parent "GObject")
+  (c-name "GtkWidget")
+  (gtype-id "GTK_TYPE_WIDGET")
+)
+
+(define-object Window
+  (in-module "Gtk")
+  (parent "GtkWidget")
+  (c-name "GtkWindow")
+  (gtype-id "GTK_TYPE_WINDOW")
+)

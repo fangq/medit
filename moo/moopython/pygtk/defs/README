@@ -1,0 +1,12 @@
+Minimal *-types.defs stubs for the pygtk-style code generator in
+moo/moopython/codegen/.
+
+pygobject-3.0 does not ship the .defs files that pygtk-2.0 did, and does not
+advertise a defsdir through pkg-config, so there is nothing on the system to
+point --register at.  These hand-written placeholders declare just the few
+fundamental types moo.defs refers to.
+
+They live here, in the repository, because the alternative was worse: the
+build used to interpolate an empty PYGTK_DEFS_DIR, producing
+--register "/gio-types.defs", and only worked on machines where someone had
+created those files at the filesystem root.

@@ -1,0 +1,27 @@
+;; Minimal GDK types for legacy build compatibility
+
+(define-object Drawable
+  (in-module "Gdk")
+  (parent "GObject")
+  (c-name "GdkDrawable")
+  (gtype-id "GDK_TYPE_DRAWABLE")
+)
+
+(define-object Window
+  (in-module "Gdk")
+  (parent "GdkDrawable")
+  (c-name "GdkWindow")
+  (gtype-id "GDK_TYPE_WINDOW")
+)
+
+(define-boxed Rectangle
+  (in-module "Gdk")
+  (c-name "GdkRectangle")
+  (gtype-id "GDK_TYPE_RECTANGLE")
+)
+
+(define-boxed Event
+  (in-module "Gdk")
+  (c-name "GdkEvent")
+  (gtype-id "GDK_TYPE_EVENT")
+)
